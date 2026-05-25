@@ -90,3 +90,50 @@ def test_yfinance_wrapper_includes_ticker_in_normalized_rows(monkeypatch):
             "volume": 2200,
         }
     ]
+
+
+def test_yfinance_wrapper_accepts_dataframe_like_history(monkeypatch):
+    class FakeFrame:
+        def __iter__(self):
+            return iter(["Open", "High", "Low", "Close", "Volume"])
+
+        def reset_index(self):
+            return self
+
+        def to_dict(self, orient):
+            assert orient == "records"
+            return [
+                {
+                    "Date": "2025-03-03",
+                    "Open": 30.0,
+                    "High": 31.0,
+                    "Low": 29.5,
+                    "Close": 30.5,
+                    "Volume": 3200,
+                }
+            ]
+
+    class FakeTicker:
+        def history(self, start, end, auto_adjust):
+            return FakeFrame()
+
+    class FakeYFinanceModule:
+        def Ticker(self, symbol):
+            assert symbol == "AAPL"
+            return FakeTicker()
+
+    monkeypatch.setattr("src.market_data.yf", FakeYFinanceModule(), raising=False)
+
+    provider = YFinanceMarketDataProvider()
+
+    assert provider.fetch_daily_prices("AAPL", "2025-03-01", "2025-03-10") == [
+        {
+            "date": "2025-03-03",
+            "ticker": "AAPL",
+            "open": 30.0,
+            "high": 31.0,
+            "low": 29.5,
+            "close": 30.5,
+            "volume": 3200,
+        }
+    ]

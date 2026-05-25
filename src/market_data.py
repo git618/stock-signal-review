@@ -23,14 +23,15 @@ class YFinanceMarketDataProvider:
             end=end_date,
             auto_adjust=False,
         )
+        records = _to_records(history)
 
-        return [self._normalize_row(symbol, row) for row in history]
+        return [self._normalize_row(symbol, row) for row in records]
 
     @staticmethod
     def _normalize_row(symbol, row):
         return NormalizedRow(
             {
-            "date": str(row["Date"]),
+            "date": str(row.get("Date", row.get("index"))),
             "ticker": symbol,
             "open": row["Open"],
             "high": row["High"],
@@ -39,3 +40,9 @@ class YFinanceMarketDataProvider:
             "volume": row["Volume"],
             }
         )
+
+
+def _to_records(history):
+    if hasattr(history, "reset_index") and hasattr(history, "to_dict"):
+        return history.reset_index().to_dict("records")
+    return history
