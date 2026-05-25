@@ -105,7 +105,7 @@ def save_recommendations(db_path, trading_date, strategy_version, recommendation
             [
                 (
                     trading_date,
-                    recommendation["symbol"],
+                    recommendation.get("symbol", recommendation.get("ticker")),
                     recommendation["score"],
                     recommendation["rank"],
                     strategy_version,

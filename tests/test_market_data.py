@@ -53,3 +53,40 @@ def test_yfinance_wrapper_returns_clean_daily_price_rows(monkeypatch):
             "volume": 1600,
         },
     ]
+
+
+def test_yfinance_wrapper_includes_ticker_in_normalized_rows(monkeypatch):
+    class FakeTicker:
+        def history(self, start, end, auto_adjust):
+            return [
+                {
+                    "Date": "2025-02-03",
+                    "Open": 20.0,
+                    "High": 21.0,
+                    "Low": 19.5,
+                    "Close": 20.5,
+                    "Volume": 2200,
+                }
+            ]
+
+    class FakeYFinanceModule:
+        def Ticker(self, symbol):
+            assert symbol == "AAPL"
+            return FakeTicker()
+
+    monkeypatch.setattr("src.market_data.yf", FakeYFinanceModule(), raising=False)
+
+    provider = YFinanceMarketDataProvider()
+    rows = provider.fetch_daily_prices("AAPL", "2025-02-01", "2025-02-10")
+
+    assert rows == [
+        {
+            "date": "2025-02-03",
+            "ticker": "AAPL",
+            "open": 20.0,
+            "high": 21.0,
+            "low": 19.5,
+            "close": 20.5,
+            "volume": 2200,
+        }
+    ]
