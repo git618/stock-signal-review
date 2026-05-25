@@ -27,11 +27,18 @@ def initialize_database(db_path):
                 symbol TEXT NOT NULL,
                 score REAL NOT NULL,
                 rank INTEGER NOT NULL,
+                entry_price REAL,
                 strategy_version TEXT NOT NULL,
                 PRIMARY KEY (trading_date, symbol, strategy_version)
             )
             """
         )
+        try:
+            connection.execute(
+                "ALTER TABLE recommendations ADD COLUMN entry_price REAL"
+            )
+        except sqlite3.OperationalError:
+            pass
         connection.commit()
     finally:
         connection.close()
@@ -99,8 +106,8 @@ def save_recommendations(db_path, trading_date, strategy_version, recommendation
         connection.executemany(
             """
             INSERT OR IGNORE INTO recommendations
-            (trading_date, symbol, score, rank, strategy_version)
-            VALUES (?, ?, ?, ?, ?)
+            (trading_date, symbol, score, rank, entry_price, strategy_version)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             [
                 (
@@ -108,6 +115,7 @@ def save_recommendations(db_path, trading_date, strategy_version, recommendation
                     recommendation.get("symbol", recommendation.get("ticker")),
                     recommendation["score"],
                     recommendation["rank"],
+                    recommendation.get("entry_price"),
                     strategy_version,
                 )
                 for recommendation in recommendations
