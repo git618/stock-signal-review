@@ -57,12 +57,14 @@ def generate_weekly_review(
     end_date=None,
     benchmark_ticker="SPY",
     provider=None,
+    review_horizon_days=5,
 ):
     db_path = db_path if db_path is not None else database_path
+    latest_reviewable_date = _add_days(end_date, -review_horizon_days)
     recommendations = [
         recommendation
         for recommendation in get_recommendations(db_path)
-        if start_date <= recommendation["trading_date"] <= end_date
+        if start_date <= recommendation["trading_date"] <= latest_reviewable_date
     ]
     if not recommendations:
         return _empty_review()
