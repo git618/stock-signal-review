@@ -145,6 +145,98 @@ def test_generate_weekly_review_uses_mocked_provider_only(tmp_path):
     ]
 
 
+def test_generate_weekly_review_skips_row_when_ticker_exit_price_is_missing(tmp_path):
+    db_path = tmp_path / "research.db"
+    initialize_database(db_path)
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-03",
+        strategy_version="v1",
+        recommendations=[{"ticker": "AAPL", "score": 0.9, "rank": 1}],
+    )
+
+    provider = FakeMarketDataProvider(
+        {
+            "AAPL": [
+                {"date": "2025-01-03", "close": 100.0},
+            ],
+            "SPY": [
+                {"date": "2025-01-03", "close": 500.0},
+                {"date": "2025-01-10", "close": 510.0},
+            ],
+        }
+    )
+
+    review = generate_weekly_review(
+        db_path=db_path,
+        start_date="2025-01-01",
+        end_date="2025-01-10",
+        benchmark_ticker="SPY",
+        provider=provider,
+    )
+
+    assert review == {
+        "summary": {
+            "reviewed_count": 0,
+            "win_count": 0,
+            "loss_count": 0,
+            "win_rate": 0.0,
+            "average_return": 0.0,
+            "average_benchmark_return": 0.0,
+            "average_excess_return": 0.0,
+            "best_ticker": None,
+            "worst_ticker": None,
+        },
+        "rows": [],
+    }
+
+
+def test_generate_weekly_review_skips_row_when_benchmark_exit_price_is_missing(tmp_path):
+    db_path = tmp_path / "research.db"
+    initialize_database(db_path)
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-03",
+        strategy_version="v1",
+        recommendations=[{"ticker": "AAPL", "score": 0.9, "rank": 1}],
+    )
+
+    provider = FakeMarketDataProvider(
+        {
+            "AAPL": [
+                {"date": "2025-01-03", "close": 100.0},
+                {"date": "2025-01-10", "close": 110.0},
+            ],
+            "SPY": [
+                {"date": "2025-01-03", "close": 500.0},
+            ],
+        }
+    )
+
+    review = generate_weekly_review(
+        db_path=db_path,
+        start_date="2025-01-01",
+        end_date="2025-01-10",
+        benchmark_ticker="SPY",
+        provider=provider,
+    )
+
+    assert review == {
+        "summary": {
+            "reviewed_count": 0,
+            "win_count": 0,
+            "loss_count": 0,
+            "win_rate": 0.0,
+            "average_return": 0.0,
+            "average_benchmark_return": 0.0,
+            "average_excess_return": 0.0,
+            "best_ticker": None,
+            "worst_ticker": None,
+        },
+        "rows": [],
+    }
+
+
 def test_weekly_review_script_exists_and_uses_default_benchmark(monkeypatch, tmp_path):
     script_path = Path(__file__).resolve().parent.parent / "scripts/generate_weekly_review.py"
     captured = {}
@@ -165,6 +257,35 @@ def test_weekly_review_script_exists_and_uses_default_benchmark(monkeypatch, tmp
         "end_date": captured["end_date"],
         "benchmark_ticker": "SPY",
     }
+
+
+def test_weekly_review_script_handles_empty_review_result_gracefully(monkeypatch, capsys, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/generate_weekly_review.py"
+
+    def fake_generate_weekly_review(**kwargs):
+        return {
+            "summary": {
+                "reviewed_count": 0,
+                "win_count": 0,
+                "loss_count": 0,
+                "win_rate": 0.0,
+                "average_return": 0.0,
+                "average_benchmark_return": 0.0,
+                "average_excess_return": 0.0,
+                "best_ticker": None,
+                "worst_ticker": None,
+            },
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.review.generate_weekly_review", fake_generate_weekly_review)
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+
+    assert "No recommendations ready for review." in captured.out
 
 
 class FakeMarketDataProvider:

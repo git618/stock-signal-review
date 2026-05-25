@@ -26,6 +26,10 @@ def main():
     )
 
     summary = review["summary"]
+    if summary.get("reviewed_count") == 0:
+        print("No recommendations ready for review.")
+        return 0
+
     print(f"reviewed_count={summary.get('reviewed_count')}")
     print(f"win_rate={summary.get('win_rate')}")
     print(f"average_return={summary.get('average_return')}")

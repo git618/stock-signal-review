@@ -80,12 +80,15 @@ def generate_weekly_review(
             end_date,
         )
 
-        entry_price = _lookup_close(ticker_prices, trading_date)
-        exit_price = _lookup_close(ticker_prices, end_date)
-        return_pct = _compute_return(entry_price, exit_price)
+        try:
+            entry_price = _lookup_close(ticker_prices, trading_date)
+            exit_price = _lookup_close(ticker_prices, end_date)
+            benchmark_entry = _lookup_close(benchmark_prices, trading_date)
+            benchmark_exit = _lookup_close(benchmark_prices, end_date)
+        except KeyError:
+            continue
 
-        benchmark_entry = _lookup_close(benchmark_prices, trading_date)
-        benchmark_exit = _lookup_close(benchmark_prices, end_date)
+        return_pct = _compute_return(entry_price, exit_price)
         benchmark_return_pct = _compute_return(benchmark_entry, benchmark_exit)
         excess_return_pct = return_pct - benchmark_return_pct
 
@@ -100,6 +103,9 @@ def generate_weekly_review(
                 "is_win": excess_return_pct > 0,
             }
         )
+
+    if not rows:
+        return _empty_review()
 
     return {
         "summary": _build_summary(rows),
