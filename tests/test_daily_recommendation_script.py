@@ -187,6 +187,76 @@ def test_generate_daily_recommendations_excludes_benchmark_ticker(tmp_path):
     assert all(recommendation["ticker"] != "SPY" for recommendation in recommendations)
 
 
+def test_generate_daily_recommendations_is_idempotent_for_same_inputs(tmp_path):
+    db_path = tmp_path / "research.db"
+    tickers = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "SPY"]
+    price_history = {
+        "AAPL": _price_rows(100.0, 2.0, 1000),
+        "MSFT": _price_rows(100.0, 1.5, 1000),
+        "NVDA": _price_rows(100.0, 3.0, 1000),
+        "GOOGL": _price_rows(100.0, 1.0, 1000),
+        "AMZN": _price_rows(100.0, 0.5, 1000),
+        "META": _price_rows(100.0, 2.5, 1000),
+        "TSLA": _price_rows(100.0, -0.5, 1000),
+        "SPY": _price_rows(100.0, 0.2, 1000),
+    }
+
+    generate_daily_recommendations(
+        tickers=tickers,
+        benchmark_ticker="SPY",
+        start_date="2025-01-01",
+        end_date="2025-01-20",
+        db_path=db_path,
+        price_history_by_ticker=price_history,
+    )
+    generate_daily_recommendations(
+        tickers=tickers,
+        benchmark_ticker="SPY",
+        start_date="2025-01-01",
+        end_date="2025-01-20",
+        db_path=db_path,
+        price_history_by_ticker=price_history,
+    )
+
+    assert get_recommendations(db_path, trading_date="2025-01-20") == [
+        {
+            "trading_date": "2025-01-20",
+            "symbol": "NVDA",
+            "score": 0.5333860809321367,
+            "rank": 1,
+            "strategy_version": "v1",
+        },
+        {
+            "trading_date": "2025-01-20",
+            "symbol": "META",
+            "score": 0.4821243254462433,
+            "rank": 2,
+            "strategy_version": "v1",
+        },
+        {
+            "trading_date": "2025-01-20",
+            "symbol": "AAPL",
+            "score": 0.43042852125043907,
+            "rank": 3,
+            "strategy_version": "v1",
+        },
+        {
+            "trading_date": "2025-01-20",
+            "symbol": "MSFT",
+            "score": 0.3782189451122915,
+            "rank": 4,
+            "strategy_version": "v1",
+        },
+        {
+            "trading_date": "2025-01-20",
+            "symbol": "GOOGL",
+            "score": 0.3253950764343856,
+            "rank": 5,
+            "strategy_version": "v1",
+        },
+    ]
+
+
 def _price_rows(start_close, close_step, start_volume):
     rows = []
     close = start_close

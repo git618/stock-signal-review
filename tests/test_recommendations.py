@@ -1,5 +1,9 @@
 from src.database import get_recommendations, initialize_database, save_recommendations
-from src.recommendations import generate_top_recommendations, score_stocks
+from src.recommendations import (
+    generate_daily_recommendations,
+    generate_top_recommendations,
+    score_stocks,
+)
 
 
 def test_generating_top_5_recommendations():
@@ -52,6 +56,82 @@ def test_saving_recommendations_to_sqlite(tmp_path):
             "score": 0.83,
             "rank": 2,
             "strategy_version": "v1",
+        },
+    ]
+
+
+def test_save_recommendations_does_not_insert_duplicate_rows_for_same_key(tmp_path):
+    db_path = tmp_path / "research.db"
+    initialize_database(db_path)
+
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-10",
+        strategy_version="v1",
+        recommendations=[
+            {"ticker": "BBB", "score": 0.91, "rank": 1},
+            {"ticker": "FFF", "score": 0.83, "rank": 2},
+        ],
+    )
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-10",
+        strategy_version="v1",
+        recommendations=[
+            {"ticker": "BBB", "score": 0.10, "rank": 99},
+            {"ticker": "FFF", "score": 0.20, "rank": 98},
+        ],
+    )
+
+    assert get_recommendations(db_path, trading_date="2025-01-10") == [
+        {
+            "trading_date": "2025-01-10",
+            "symbol": "BBB",
+            "score": 0.91,
+            "rank": 1,
+            "strategy_version": "v1",
+        },
+        {
+            "trading_date": "2025-01-10",
+            "symbol": "FFF",
+            "score": 0.83,
+            "rank": 2,
+            "strategy_version": "v1",
+        },
+    ]
+
+
+def test_save_recommendations_allows_duplicates_with_different_strategy_version(tmp_path):
+    db_path = tmp_path / "research.db"
+    initialize_database(db_path)
+
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-10",
+        strategy_version="v1",
+        recommendations=[{"ticker": "BBB", "score": 0.91, "rank": 1}],
+    )
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-10",
+        strategy_version="v2",
+        recommendations=[{"ticker": "BBB", "score": 0.55, "rank": 3}],
+    )
+
+    assert get_recommendations(db_path, trading_date="2025-01-10") == [
+        {
+            "trading_date": "2025-01-10",
+            "symbol": "BBB",
+            "score": 0.91,
+            "rank": 1,
+            "strategy_version": "v1",
+        },
+        {
+            "trading_date": "2025-01-10",
+            "symbol": "BBB",
+            "score": 0.55,
+            "rank": 3,
+            "strategy_version": "v2",
         },
     ]
 

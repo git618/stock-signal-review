@@ -98,7 +98,7 @@ def save_recommendations(db_path, trading_date, strategy_version, recommendation
     try:
         connection.executemany(
             """
-            INSERT OR REPLACE INTO recommendations
+            INSERT OR IGNORE INTO recommendations
             (trading_date, symbol, score, rank, strategy_version)
             VALUES (?, ?, ?, ?, ?)
             """,
