@@ -161,6 +161,32 @@ def test_manual_script_exists_and_uses_default_ticker_list(monkeypatch, tmp_path
     }
 
 
+def test_generate_daily_recommendations_excludes_benchmark_ticker(tmp_path):
+    db_path = tmp_path / "research.db"
+    tickers = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "SPY"]
+    price_history = {
+        "AAPL": _price_rows(100.0, 2.0, 1000),
+        "MSFT": _price_rows(100.0, 1.5, 1000),
+        "NVDA": _price_rows(100.0, 3.0, 1000),
+        "GOOGL": _price_rows(100.0, 1.0, 1000),
+        "AMZN": _price_rows(100.0, 0.5, 1000),
+        "META": _price_rows(100.0, 2.5, 1000),
+        "TSLA": _price_rows(100.0, -0.5, 1000),
+        "SPY": _price_rows(100.0, 10.0, 1000),
+    }
+
+    recommendations = generate_daily_recommendations(
+        tickers=tickers,
+        benchmark_ticker="SPY",
+        start_date="2025-01-01",
+        end_date="2025-01-20",
+        db_path=db_path,
+        price_history_by_ticker=price_history,
+    )
+
+    assert all(recommendation["ticker"] != "SPY" for recommendation in recommendations)
+
+
 def _price_rows(start_close, close_step, start_volume):
     rows = []
     close = start_close

@@ -61,10 +61,9 @@ def generate_daily_recommendations(
     provider=None,
     price_history_by_ticker=None,
 ):
-    del benchmark_ticker  # Reserved for downstream review/reporting flows.
-
     db_path = db_path if db_path is not None else database_path
     initialize_database(db_path)
+    candidate_tickers = [ticker for ticker in tickers if ticker != benchmark_ticker]
 
     provider = provider or YFinanceMarketDataProvider()
     strategy = WeightedStrategy(
@@ -77,7 +76,7 @@ def generate_daily_recommendations(
     )
 
     scored_stocks = []
-    for ticker in tickers:
+    for ticker in candidate_tickers:
         prices = _get_price_history(
             ticker=ticker,
             start_date=start_date,
