@@ -13,6 +13,8 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.config import DEFAULT_DB_PATH
 from src.database import initialize_database
 
+# Shared default database path: data/stock_research.db
+
 
 def main(argv=None):
     args = _parse_args(argv)
