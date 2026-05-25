@@ -161,6 +161,46 @@ def test_manual_script_exists_and_uses_default_ticker_list(monkeypatch, tmp_path
     }
 
 
+def test_daily_script_accepts_argparse_options(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/generate_daily_recommendations.py"
+    captured = {}
+
+    def fake_generate_daily_recommendations(**kwargs):
+        captured.update(kwargs)
+        return []
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr(
+        "src.recommendations.generate_daily_recommendations",
+        fake_generate_daily_recommendations,
+    )
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--db",
+            "custom.db",
+            "--tickers",
+            "AAPL,MSFT,NVDA",
+            "--benchmark",
+            "QQQ",
+            "--lookback-days",
+            "30",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    assert captured == {
+        "tickers": ["AAPL", "MSFT", "NVDA"],
+        "benchmark_ticker": "QQQ",
+        "start_date": captured["start_date"],
+        "end_date": captured["end_date"],
+        "db_path": Path("custom.db"),
+    }
+
+
 def test_generate_daily_recommendations_excludes_benchmark_ticker(tmp_path):
     db_path = tmp_path / "research.db"
     tickers = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "SPY"]

@@ -78,3 +78,35 @@ def test_list_recommendations_output_includes_required_fields(monkeypatch, capsy
     assert "score" in captured.out
     assert "entry_price" in captured.out
     assert "strategy_version" in captured.out
+
+
+def test_list_recommendations_script_accepts_argparse_options(monkeypatch, capsys, tmp_path):
+    db_path = tmp_path / "custom.db"
+    initialize_database(db_path)
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-10",
+        strategy_version="v1",
+        recommendations=[
+            {"ticker": "AAPL", "score": 0.91, "rank": 1, "entry_price": 150.0},
+            {"ticker": "MSFT", "score": 0.83, "rank": 2, "entry_price": 310.0},
+        ],
+    )
+
+    script_path = Path(__file__).resolve().parent.parent / "scripts/list_recommendations.py"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--db",
+            str(db_path),
+            "--limit",
+            "1",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+
+    assert "AAPL" in captured.out or "MSFT" in captured.out
+    assert not ("AAPL" in captured.out and "MSFT" in captured.out)

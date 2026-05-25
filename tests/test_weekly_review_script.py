@@ -389,6 +389,41 @@ def test_weekly_review_script_exists_and_uses_default_benchmark(monkeypatch, tmp
     }
 
 
+def test_weekly_review_script_accepts_argparse_options(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/generate_weekly_review.py"
+    captured = {}
+
+    def fake_generate_weekly_review(**kwargs):
+        captured.update(kwargs)
+        return {"summary": {}, "rows": []}
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.review.generate_weekly_review", fake_generate_weekly_review)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--db",
+            "weekly.db",
+            "--benchmark",
+            "QQQ",
+            "--review-horizon-days",
+            "7",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    assert captured == {
+        "db_path": Path("weekly.db"),
+        "start_date": captured["start_date"],
+        "end_date": captured["end_date"],
+        "benchmark_ticker": "QQQ",
+        "review_horizon_days": 7,
+    }
+
+
 def test_weekly_review_script_handles_empty_review_result_gracefully(monkeypatch, capsys, tmp_path):
     script_path = Path(__file__).resolve().parent.parent / "scripts/generate_weekly_review.py"
 

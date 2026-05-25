@@ -1,5 +1,6 @@
 """Generate a weekly review of saved recommendations."""
 
+import argparse
 from datetime import date, timedelta
 from pathlib import Path
 import sys
@@ -15,14 +16,21 @@ DEFAULT_DB_PATH = Path("data/stock_research.db")
 DEFAULT_BENCHMARK = "SPY"
 
 
-def main():
+def main(argv=None):
+    args = _parse_args(argv)
     end_date = date.today()
     start_date = end_date - timedelta(days=7)
+    review_kwargs = {
+        "db_path": Path(args.db),
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "benchmark_ticker": args.benchmark,
+    }
+    if args.review_horizon_days is not None:
+        review_kwargs["review_horizon_days"] = args.review_horizon_days
+
     review = generate_weekly_review(
-        db_path=DEFAULT_DB_PATH,
-        start_date=start_date.isoformat(),
-        end_date=end_date.isoformat(),
-        benchmark_ticker=DEFAULT_BENCHMARK,
+        **review_kwargs,
     )
 
     summary = review["summary"]
@@ -50,6 +58,14 @@ def main():
         print()
 
     return 0
+
+
+def _parse_args(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
+    parser.add_argument("--benchmark", default=DEFAULT_BENCHMARK)
+    parser.add_argument("--review-horizon-days", type=int)
+    return parser.parse_known_args(argv)[0]
 
 
 if __name__ == "__main__":
