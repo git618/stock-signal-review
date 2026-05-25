@@ -1,5 +1,6 @@
 """List saved recommendations from SQLite."""
 
+import argparse
 from pathlib import Path
 import os
 import sqlite3
@@ -13,10 +14,11 @@ from src.config import DEFAULT_DB_PATH
 from src.database import initialize_database
 
 
-def main():
-    db_path = Path(os.environ.get("STOCK_RESEARCH_DB_PATH", DEFAULT_DB_PATH))
+def main(argv=None):
+    args = _parse_args(argv)
+    db_path = Path(args.db)
     initialize_database(db_path)
-    rows = _read_recommendations(db_path)
+    rows = _read_recommendations(db_path, args.limit)
 
     if not rows:
         print("No recommendations found.")
@@ -37,7 +39,17 @@ def main():
     return 0
 
 
-def _read_recommendations(db_path):
+def _parse_args(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--db",
+        default=os.environ.get("STOCK_RESEARCH_DB_PATH", str(DEFAULT_DB_PATH)),
+    )
+    parser.add_argument("--limit", type=int, default=20)
+    return parser.parse_known_args(argv)[0]
+
+
+def _read_recommendations(db_path, limit):
     connection = sqlite3.connect(db_path)
     try:
         rows = connection.execute(
@@ -45,7 +57,10 @@ def _read_recommendations(db_path):
             SELECT trading_date, rank, symbol, score, entry_price, strategy_version
             FROM recommendations
             ORDER BY trading_date DESC, rank ASC, symbol ASC
+            LIMIT ?
             """
+            ,
+            (limit,),
         ).fetchall()
     finally:
         connection.close()
