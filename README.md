@@ -68,6 +68,30 @@ Current keys:
 - `database_path`
 - `backtest_start_date`
 - `backtest_end_date`
+- `strategy.version`
+- `strategy.weights`
+
+Strategy config example:
+
+```json
+{
+  "strategy": {
+    "version": "v1",
+    "weights": {
+      "return_20d": 0.4,
+      "return_5d": 0.2,
+      "volume_ratio_20d": 0.2,
+      "volatility_20d": -0.2
+    }
+  }
+}
+```
+
+Strategy notes:
+- `strategy.version` is stored with recommendations and backtest outputs for comparison across rule sets.
+- `strategy.weights` controls the weighted scoring inputs used by daily recommendations and backtests.
+- Missing strategy config falls back to the built-in research defaults.
+- Strategy tuning is for research only. Changing weights does not guarantee profits or future outperformance.
 
 Example:
 
