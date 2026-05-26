@@ -54,6 +54,41 @@ What each step does:
 - `list_recommendations.py` shows saved recommendations from SQLite.
 - `generate_weekly_review.py` reviews mature recommendations against the benchmark.
 
+## Configuration
+
+Default research settings live in [config/default.json](/home/king/stock-signal-review/config/default.json).
+
+Current keys:
+- `tickers`
+- `benchmark`
+- `lookback_days`
+- `holding_days`
+- `top_n`
+- `review_horizon_days`
+- `database_path`
+
+Example:
+
+```bash
+python scripts/generate_daily_recommendations.py --config config/default.json
+python scripts/generate_weekly_review.py --config config/default.json
+python scripts/backtest_strategy.py --config config/default.json --start-date 2026-02-24 --end-date 2026-05-25
+```
+
+Precedence:
+- CLI arguments override config file values.
+- Config file values override built-in defaults.
+
+Example override:
+
+```bash
+python scripts/backtest_strategy.py \
+  --config config/default.json \
+  --start-date 2026-02-24 \
+  --end-date 2026-05-25 \
+  --top-n 2
+```
+
 ## CLI Options
 
 ### `generate_daily_recommendations.py`
@@ -67,6 +102,7 @@ python scripts/generate_daily_recommendations.py \
 ```
 
 Options:
+- `--config`: JSON config path, defaults to `config/default.json`
 - `--db`: SQLite database path
 - `--tickers`: ticker list, either space-separated or comma-separated
 - `--benchmark`: benchmark ticker used for later review workflows
@@ -82,6 +118,7 @@ python scripts/generate_weekly_review.py \
 ```
 
 Options:
+- `--config`: JSON config path, defaults to `config/default.json`
 - `--db`: SQLite database path
 - `--benchmark`: benchmark ticker
 - `--review-horizon-days`: minimum holding period in trading days before a recommendation is considered reviewable
@@ -101,6 +138,7 @@ python scripts/list_recommendations.py \
 ```
 
 Options:
+- `--config`: optional JSON config path for database defaults
 - `--db`: SQLite database path
 - `--limit`: number of rows to display
 - `--csv`: write listed recommendations to CSV
@@ -168,6 +206,7 @@ python scripts/backtest_strategy.py \
 ```
 
 Options:
+- `--config`: JSON config path, defaults to `config/default.json`
 - `--tickers`: ticker list, either space-separated or comma-separated
 - `--benchmark`: benchmark ticker
 - `--start-date`: backtest start date
