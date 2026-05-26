@@ -16,6 +16,27 @@ pip install -r requirements.txt
 python -m pytest -q
 ```
 
+## Common Commands
+
+```bash
+make test
+make reset
+make daily
+make list
+make weekly
+make backtest
+make smoke
+```
+
+What each command does:
+- `make test`: run the full test suite with the project virtualenv
+- `make reset`: clear and recreate the local SQLite database
+- `make daily`: generate and save daily recommendations
+- `make list`: print saved recommendations from SQLite
+- `make weekly`: review mature recommendations against the benchmark
+- `make backtest`: run the built-in backtest command with compact summary output
+- `make smoke`: run the manual market-data smoke check
+
 ## MVP Workflow
 
 Run the scripts from the project root in this order:
