@@ -178,7 +178,26 @@ Options:
 - `--max-rows`: cap the number of detailed result rows printed
 - `--csv`: write backtest rows to CSV
 
+Backtest summary output:
+- Summary metrics are printed to stdout.
+- The summary includes:
+  - `tested_count`
+  - `win_count`
+  - `loss_count`
+  - `win_rate`
+  - `average_return`
+  - `average_benchmark_return`
+  - `average_excess_return`
+  - `median_return`
+  - `median_excess_return`
+  - `best_ticker`
+  - `worst_ticker`
+  - `best_return`
+  - `worst_return`
+- Empty backtests return zero-value summary metrics and `None` for ticker fields instead of failing.
+
 Backtest CSV export notes:
+- CSV export remains row-level only
 - writes detailed backtest rows to CSV
 - `--summary-only` affects terminal output only
 - CSV still includes the detailed result rows even when `--summary-only` is used
