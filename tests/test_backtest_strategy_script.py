@@ -554,6 +554,127 @@ def test_run_backtest_normalizes_output_dates_to_yyyy_mm_dd():
     assert result["rows"][0]["exit_date"] == "2025-01-25"
 
 
+def test_backtest_exit_date_uses_available_trading_days_not_calendar_days():
+    tickers = ["AAPL", "SPY"]
+    price_history = {
+        "AAPL": _price_rows_with_gaps(
+            [
+                "2025-01-16",
+                "2025-01-17",
+                "2025-01-20",
+                "2025-01-21",
+                "2025-01-22",
+                "2025-01-23",
+                "2025-01-24",
+                "2025-01-27",
+            ],
+            100.0,
+            2.0,
+        ),
+        "SPY": _price_rows_with_gaps(
+            [
+                "2025-01-16",
+                "2025-01-17",
+                "2025-01-20",
+                "2025-01-21",
+                "2025-01-22",
+                "2025-01-23",
+                "2025-01-24",
+                "2025-01-27",
+            ],
+            100.0,
+            1.0,
+        ),
+    }
+
+    result = run_backtest(
+        tickers=tickers,
+        benchmark_ticker="SPY",
+        start_date="2025-01-20",
+        end_date="2025-01-20",
+        holding_days=5,
+        top_n=1,
+        price_history_by_ticker=price_history,
+    )
+
+    assert result["rows"][0]["exit_date"] == "2025-01-27"
+
+
+def test_backtest_skips_weekend_and_non_trading_gaps():
+    tickers = ["AAPL", "SPY"]
+    price_history = {
+        "AAPL": _price_rows_with_gaps(
+            [
+                "2025-01-14",
+                "2025-01-15",
+                "2025-01-16",
+                "2025-01-17",
+                "2025-01-21",
+                "2025-01-22",
+                "2025-01-23",
+                "2025-01-24",
+            ],
+            100.0,
+            2.0,
+        ),
+        "SPY": _price_rows_with_gaps(
+            [
+                "2025-01-14",
+                "2025-01-15",
+                "2025-01-16",
+                "2025-01-17",
+                "2025-01-21",
+                "2025-01-22",
+                "2025-01-23",
+                "2025-01-24",
+            ],
+            100.0,
+            1.0,
+        ),
+    }
+
+    result = run_backtest(
+        tickers=tickers,
+        benchmark_ticker="SPY",
+        start_date="2025-01-16",
+        end_date="2025-01-16",
+        holding_days=5,
+        top_n=1,
+        price_history_by_ticker=price_history,
+    )
+
+    assert result["rows"][0]["exit_date"] == "2025-01-24"
+
+
+def test_backtest_skips_row_when_future_trading_days_are_insufficient():
+    tickers = ["AAPL", "SPY"]
+    price_history = {
+        "AAPL": _price_rows_with_gaps(
+            ["2025-01-20", "2025-01-21", "2025-01-22"],
+            100.0,
+            2.0,
+        ),
+        "SPY": _price_rows_with_gaps(
+            ["2025-01-20", "2025-01-21", "2025-01-22"],
+            100.0,
+            1.0,
+        ),
+    }
+
+    result = run_backtest(
+        tickers=tickers,
+        benchmark_ticker="SPY",
+        start_date="2025-01-20",
+        end_date="2025-01-20",
+        holding_days=5,
+        top_n=1,
+        price_history_by_ticker=price_history,
+    )
+
+    assert result["summary"]["tested_count"] == 0
+    assert result["rows"] == []
+
+
 def _price_rows(start_close, close_step):
     rows = []
     close = start_close
@@ -585,6 +706,25 @@ def _price_rows_with_timezone_dates(start_close, close_step):
                 "low": close - 1.0,
                 "close": close,
                 "volume": 1000 + day * 10,
+                "ticker": "IGNORED",
+            }
+        )
+        close += close_step
+    return rows
+
+
+def _price_rows_with_gaps(dates, start_close, close_step):
+    rows = []
+    close = start_close
+    for index, day in enumerate(dates):
+        rows.append(
+            {
+                "date": day,
+                "open": close - 0.5,
+                "high": close + 1.0,
+                "low": close - 1.0,
+                "close": close,
+                "volume": 1000 + index * 10,
                 "ticker": "IGNORED",
             }
         )

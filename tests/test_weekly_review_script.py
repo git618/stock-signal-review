@@ -22,14 +22,26 @@ def test_generate_weekly_review_from_saved_recommendations(tmp_path):
         {
             "AAPL": [
                 {"date": "2025-01-03", "close": 100.0},
+                {"date": "2025-01-06", "close": 102.0},
+                {"date": "2025-01-07", "close": 104.0},
+                {"date": "2025-01-08", "close": 106.0},
+                {"date": "2025-01-09", "close": 108.0},
                 {"date": "2025-01-10", "close": 110.0},
             ],
             "MSFT": [
                 {"date": "2025-01-03", "close": 200.0},
+                {"date": "2025-01-06", "close": 198.0},
+                {"date": "2025-01-07", "close": 196.0},
+                {"date": "2025-01-08", "close": 194.0},
+                {"date": "2025-01-09", "close": 192.0},
                 {"date": "2025-01-10", "close": 190.0},
             ],
             "SPY": [
                 {"date": "2025-01-03", "close": 500.0},
+                {"date": "2025-01-06", "close": 502.0},
+                {"date": "2025-01-07", "close": 504.0},
+                {"date": "2025-01-08", "close": 506.0},
+                {"date": "2025-01-09", "close": 508.0},
                 {"date": "2025-01-10", "close": 510.0},
             ],
         }
@@ -122,10 +134,18 @@ def test_generate_weekly_review_uses_mocked_provider_only(tmp_path):
         {
             "AAPL": [
                 {"date": "2025-01-03", "close": 100.0},
+                {"date": "2025-01-06", "close": 101.0},
+                {"date": "2025-01-07", "close": 101.0},
+                {"date": "2025-01-08", "close": 101.0},
+                {"date": "2025-01-09", "close": 101.0},
                 {"date": "2025-01-10", "close": 101.0},
             ],
             "SPY": [
                 {"date": "2025-01-03", "close": 500.0},
+                {"date": "2025-01-06", "close": 501.0},
+                {"date": "2025-01-07", "close": 502.0},
+                {"date": "2025-01-08", "close": 503.0},
+                {"date": "2025-01-09", "close": 504.0},
                 {"date": "2025-01-10", "close": 505.0},
             ],
         }
@@ -231,10 +251,18 @@ def test_generate_weekly_review_reviews_mature_recommendations(tmp_path):
         {
             "AAPL": [
                 {"date": "2025-01-03", "close": 100.0},
+                {"date": "2025-01-06", "close": 102.0},
+                {"date": "2025-01-07", "close": 104.0},
+                {"date": "2025-01-08", "close": 106.0},
+                {"date": "2025-01-09", "close": 108.0},
                 {"date": "2025-01-10", "close": 110.0},
             ],
             "SPY": [
                 {"date": "2025-01-03", "close": 500.0},
+                {"date": "2025-01-06", "close": 502.0},
+                {"date": "2025-01-07", "close": 504.0},
+                {"date": "2025-01-08", "close": 506.0},
+                {"date": "2025-01-09", "close": 508.0},
                 {"date": "2025-01-10", "close": 510.0},
             ],
         }
@@ -250,6 +278,48 @@ def test_generate_weekly_review_reviews_mature_recommendations(tmp_path):
 
     assert review["summary"]["reviewed_count"] == 1
     assert review["rows"][0]["ticker"] == "AAPL"
+
+
+def test_generate_weekly_review_uses_trading_day_exit_date(tmp_path):
+    db_path = tmp_path / "research.db"
+    initialize_database(db_path)
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-20",
+        strategy_version="v1",
+        recommendations=[{"ticker": "AAPL", "score": 0.9, "rank": 1}],
+    )
+
+    provider = FakeMarketDataProvider(
+        {
+            "AAPL": [
+                {"date": "2025-01-20", "close": 100.0},
+                {"date": "2025-01-21", "close": 101.0},
+                {"date": "2025-01-22", "close": 102.0},
+                {"date": "2025-01-23", "close": 103.0},
+                {"date": "2025-01-24", "close": 104.0},
+                {"date": "2025-01-27", "close": 105.0},
+            ],
+            "SPY": [
+                {"date": "2025-01-20", "close": 500.0},
+                {"date": "2025-01-21", "close": 501.0},
+                {"date": "2025-01-22", "close": 502.0},
+                {"date": "2025-01-23", "close": 503.0},
+                {"date": "2025-01-24", "close": 504.0},
+                {"date": "2025-01-27", "close": 505.0},
+            ],
+        }
+    )
+
+    review = generate_weekly_review(
+        db_path=db_path,
+        start_date="2025-01-01",
+        end_date="2025-01-31",
+        benchmark_ticker="SPY",
+        provider=provider,
+    )
+
+    assert review["rows"][0]["exit_price"] == 105.0
 
 
 def test_generate_weekly_review_does_not_call_provider_when_all_recommendations_are_immature(tmp_path):

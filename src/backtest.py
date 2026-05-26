@@ -51,7 +51,13 @@ def run_backtest(
 
     rows = []
     for recommendation_date in recommendation_dates:
-        exit_date = _add_days(recommendation_date, holding_days)
+        exit_date = _trading_day_exit_date(
+            history_map.get(benchmark_ticker, []),
+            recommendation_date,
+            holding_days,
+        )
+        if exit_date is None:
+            continue
         scored_stocks = []
         for ticker in tickers:
             if ticker == benchmark_ticker:
@@ -158,13 +164,14 @@ def _get_price_history(ticker, start_date, end_date, provider, price_history_by_
 
 
 def _normalize_price_history(rows):
-    return [
+    normalized_rows = [
         {
             **row,
             "date": _normalize_date(row["date"]),
         }
         for row in rows
     ]
+    return sorted(normalized_rows, key=lambda row: row["date"])
 
 
 def _recommendation_dates(benchmark_rows, start_date, end_date, holding_days):
@@ -180,6 +187,13 @@ def _row_for_date(rows, target_date):
         if row["date"] == target_date:
             return row
     return None
+
+
+def _trading_day_exit_date(rows, recommendation_date, holding_days):
+    future_dates = [row["date"] for row in rows if row["date"] > recommendation_date]
+    if len(future_dates) < holding_days:
+        return None
+    return future_dates[holding_days - 1]
 
 
 def _compute_return(entry_price, exit_price):

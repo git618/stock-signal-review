@@ -75,18 +75,32 @@ def generate_weekly_review(
     for recommendation in recommendations:
         ticker = recommendation["symbol"]
         trading_date = recommendation["trading_date"]
-        ticker_prices = provider.fetch_daily_prices(ticker, trading_date, end_date)
-        benchmark_prices = provider.fetch_daily_prices(
+        ticker_prices = _normalize_price_history(
+            provider.fetch_daily_prices(ticker, trading_date, end_date)
+        )
+        benchmark_prices = _normalize_price_history(
+            provider.fetch_daily_prices(
             benchmark_ticker,
             trading_date,
             end_date,
+            )
         )
+        exit_date = _trading_day_exit_date(ticker_prices, trading_date, review_horizon_days)
+        if exit_date is None:
+            continue
+        benchmark_exit_date = _trading_day_exit_date(
+            benchmark_prices,
+            trading_date,
+            review_horizon_days,
+        )
+        if benchmark_exit_date is None:
+            continue
 
         try:
             entry_price = _lookup_close(ticker_prices, trading_date)
-            exit_price = _lookup_close(ticker_prices, end_date)
+            exit_price = _lookup_close(ticker_prices, exit_date)
             benchmark_entry = _lookup_close(benchmark_prices, trading_date)
-            benchmark_exit = _lookup_close(benchmark_prices, end_date)
+            benchmark_exit = _lookup_close(benchmark_prices, benchmark_exit_date)
         except KeyError:
             continue
 
@@ -137,6 +151,39 @@ def _lookup_close(price_rows, target_date):
         if row["date"] == target_date:
             return row["close"]
     raise KeyError(f"missing close for {target_date}")
+
+
+def _normalize_price_history(rows):
+    normalized_rows = [
+        {
+            **row,
+            "date": _normalize_date(row["date"]),
+        }
+        for row in rows
+    ]
+    return sorted(normalized_rows, key=lambda row: row["date"])
+
+
+def _normalize_date(value):
+    if hasattr(value, "date"):
+        try:
+            return value.date().isoformat()
+        except TypeError:
+            pass
+
+    text = str(value)
+    if " " in text:
+        text = text.split(" ", 1)[0]
+    if "T" in text:
+        text = text.split("T", 1)[0]
+    return text
+
+
+def _trading_day_exit_date(rows, recommendation_date, holding_days):
+    future_dates = [row["date"] for row in rows if row["date"] > recommendation_date]
+    if len(future_dates) < holding_days:
+        return None
+    return future_dates[holding_days - 1]
 
 
 def _build_summary(rows):
