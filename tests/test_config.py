@@ -18,6 +18,8 @@ def test_load_config_loads_default_json():
         "top_n": 5,
         "review_horizon_days": 5,
         "database_path": "data/stock_research.db",
+        "backtest_start_date": "2026-02-24",
+        "backtest_end_date": "2026-05-25",
     }
 
 
@@ -47,6 +49,8 @@ def test_load_config_loads_custom_config_file(tmp_path):
         "top_n": 3,
         "review_horizon_days": 7,
         "database_path": "data/custom.db",
+        "backtest_start_date": None,
+        "backtest_end_date": None,
     }
 
 
@@ -70,6 +74,8 @@ def test_load_config_missing_optional_keys_fall_back_to_defaults(tmp_path):
         "top_n": 5,
         "review_horizon_days": 5,
         "database_path": "data/stock_research.db",
+        "backtest_start_date": None,
+        "backtest_end_date": None,
     }
 
 

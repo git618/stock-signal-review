@@ -17,6 +17,8 @@ DEFAULT_CONFIG = {
     "top_n": 5,
     "review_horizon_days": 5,
     "database_path": "data/stock_research.db",
+    "backtest_start_date": None,
+    "backtest_end_date": None,
 }
 
 

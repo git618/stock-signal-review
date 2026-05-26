@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from pathlib import Path
 import runpy
 
@@ -155,7 +156,9 @@ def test_backtest_script_uses_config_values(monkeypatch, tmp_path):
   "tickers": ["AAPL", "MSFT"],
   "benchmark": "QQQ",
   "holding_days": 7,
-  "top_n": 4
+  "top_n": 4,
+  "backtest_start_date": "2025-01-01",
+  "backtest_end_date": "2025-01-31"
 }"""
     )
     captured = {}
@@ -173,10 +176,6 @@ def test_backtest_script_uses_config_values(monkeypatch, tmp_path):
             str(script_path),
             "--config",
             str(config_path),
-            "--start-date",
-            "2025-01-01",
-            "--end-date",
-            "2025-01-31",
         ],
     )
 
@@ -200,7 +199,9 @@ def test_backtest_script_cli_overrides_config_values(monkeypatch, tmp_path):
   "tickers": ["AAPL", "MSFT"],
   "benchmark": "QQQ",
   "holding_days": 7,
-  "top_n": 4
+  "top_n": 4,
+  "backtest_start_date": "2024-01-01",
+  "backtest_end_date": "2024-01-31"
 }"""
     )
     captured = {}
@@ -243,6 +244,124 @@ def test_backtest_script_cli_overrides_config_values(monkeypatch, tmp_path):
         "holding_days": 5,
         "top_n": 2,
     }
+
+
+def test_backtest_script_runs_with_config_only(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/backtest_strategy.py"
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        """{
+  "tickers": ["AAPL", "MSFT"],
+  "benchmark": "QQQ",
+  "holding_days": 7,
+  "top_n": 4,
+  "backtest_start_date": "2025-02-01",
+  "backtest_end_date": "2025-02-28"
+}"""
+    )
+    captured = {}
+
+    def fake_run_backtest(**kwargs):
+        captured.update(kwargs)
+        return {"summary": {}, "rows": []}
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--config",
+            str(config_path),
+            "--summary-only",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    assert captured == {
+        "tickers": ["AAPL", "MSFT"],
+        "benchmark_ticker": "QQQ",
+        "start_date": "2025-02-01",
+        "end_date": "2025-02-28",
+        "holding_days": 7,
+        "top_n": 4,
+    }
+
+
+def test_backtest_script_fallback_derives_dates_from_lookback_days(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/backtest_strategy.py"
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        """{
+  "tickers": ["AAPL", "MSFT"],
+  "benchmark": "QQQ",
+  "lookback_days": 30,
+  "holding_days": 7,
+  "top_n": 4
+}"""
+    )
+    captured = {}
+
+    def fake_run_backtest(**kwargs):
+        captured.update(kwargs)
+        return {"summary": {}, "rows": []}
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--config",
+            str(config_path),
+            "--summary-only",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    expected_end = date.today().isoformat()
+    expected_start = (date.today() - timedelta(days=30)).isoformat()
+    assert captured == {
+        "tickers": ["AAPL", "MSFT"],
+        "benchmark_ticker": "QQQ",
+        "start_date": expected_start,
+        "end_date": expected_end,
+        "holding_days": 7,
+        "top_n": 4,
+    }
+
+
+def test_backtest_script_explicit_cli_dates_still_work_without_config(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/backtest_strategy.py"
+    captured = {}
+
+    def fake_run_backtest(**kwargs):
+        captured.update(kwargs)
+        return {"summary": {}, "rows": []}
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--start-date",
+            "2026-02-24",
+            "--end-date",
+            "2026-05-25",
+            "--summary-only",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    assert captured["start_date"] == "2026-02-24"
+    assert captured["end_date"] == "2026-05-25"
 
 
 def test_backtest_script_accepts_summary_only(monkeypatch, tmp_path):

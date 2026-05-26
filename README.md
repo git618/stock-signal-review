@@ -66,6 +66,8 @@ Current keys:
 - `top_n`
 - `review_horizon_days`
 - `database_path`
+- `backtest_start_date`
+- `backtest_end_date`
 
 Example:
 
@@ -78,6 +80,13 @@ python scripts/backtest_strategy.py --config config/default.json --start-date 20
 Precedence:
 - CLI arguments override config file values.
 - Config file values override built-in defaults.
+
+Backtest date precedence:
+- `--start-date` and `--end-date` override config values.
+- `backtest_start_date` and `backtest_end_date` from config are used when CLI dates are omitted.
+- If neither CLI nor config provides backtest dates, the script derives:
+  - `end_date = today`
+  - `start_date = today - lookback_days`
 
 Example override:
 

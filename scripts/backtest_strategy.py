@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+from datetime import date, timedelta
 from pathlib import Path
 import sys
 
@@ -16,11 +17,12 @@ from src.backtest import run_backtest
 def main(argv=None):
     args = _parse_args(argv)
     config = load_config(args.config)
+    start_date, end_date = _resolve_backtest_dates(args, config)
     result = run_backtest(
         tickers=_normalize_tickers(args.tickers) if args.tickers is not None else config["tickers"],
         benchmark_ticker=args.benchmark if args.benchmark is not None else config["benchmark"],
-        start_date=args.start_date,
-        end_date=args.end_date,
+        start_date=start_date,
+        end_date=end_date,
         holding_days=args.holding_days if args.holding_days is not None else config["holding_days"],
         top_n=args.top_n if args.top_n is not None else config["top_n"],
     )
@@ -73,8 +75,8 @@ def _parse_args(argv):
     parser.add_argument("--config")
     parser.add_argument("--tickers", nargs="+")
     parser.add_argument("--benchmark")
-    parser.add_argument("--start-date", required=True)
-    parser.add_argument("--end-date", required=True)
+    parser.add_argument("--start-date")
+    parser.add_argument("--end-date")
     parser.add_argument("--holding-days", type=int)
     parser.add_argument("--top-n", type=int)
     parser.add_argument("--summary-only", action="store_true")
@@ -87,6 +89,26 @@ def _normalize_tickers(raw_tickers):
     if len(raw_tickers) == 1 and "," in raw_tickers[0]:
         return [ticker.strip() for ticker in raw_tickers[0].split(",") if ticker.strip()]
     return raw_tickers
+
+
+def _resolve_backtest_dates(args, config):
+    if args.start_date is not None and args.end_date is not None:
+        return args.start_date, args.end_date
+    if args.start_date is not None or args.end_date is not None:
+        today = date.today()
+        lookback_days = config["lookback_days"]
+        start_date = args.start_date if args.start_date is not None else (today - timedelta(days=lookback_days)).isoformat()
+        end_date = args.end_date if args.end_date is not None else today.isoformat()
+        return start_date, end_date
+
+    config_start = config.get("backtest_start_date")
+    config_end = config.get("backtest_end_date")
+    if config_start is not None and config_end is not None:
+        return config_start, config_end
+
+    today = date.today()
+    lookback_days = config["lookback_days"]
+    return (today - timedelta(days=lookback_days)).isoformat(), today.isoformat()
 
 
 def _write_csv(csv_path, rows):
