@@ -1,6 +1,7 @@
 """Generate a weekly review of saved recommendations."""
 
 import argparse
+import csv
 from datetime import date, timedelta
 from pathlib import Path
 import sys
@@ -32,6 +33,11 @@ def main(argv=None):
     review = generate_weekly_review(
         **review_kwargs,
     )
+
+    if args.csv:
+        csv_path = Path(args.csv)
+        _write_csv(csv_path, review["rows"])
+        print(f"Wrote CSV: {csv_path}")
 
     summary = review["summary"]
     if summary.get("reviewed_count") == 0:
@@ -65,7 +71,25 @@ def _parse_args(argv):
     parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
     parser.add_argument("--benchmark", default=DEFAULT_BENCHMARK)
     parser.add_argument("--review-horizon-days", type=int)
+    parser.add_argument("--csv")
     return parser.parse_known_args(argv)[0]
+
+
+def _write_csv(csv_path, rows):
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "ticker",
+        "entry_price",
+        "exit_price",
+        "return_pct",
+        "benchmark_return_pct",
+        "excess_return_pct",
+        "is_win",
+    ]
+    with csv_path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 if __name__ == "__main__":

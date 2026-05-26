@@ -381,6 +381,134 @@ def test_default_behavior_still_prints_all_detail_rows(monkeypatch, capsys, tmp_
     assert captured.out.count("recommendation_date=") == 2
 
 
+def test_backtest_script_writes_csv_when_requested(monkeypatch, capsys, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/backtest_strategy.py"
+    csv_path = tmp_path / "backtest.csv"
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": {
+                "tested_count": 1,
+                "win_rate": 1.0,
+                "average_return": 0.1,
+                "average_benchmark_return": 0.02,
+                "average_excess_return": 0.08,
+                "best_ticker": "AAPL",
+                "worst_ticker": "AAPL",
+            },
+            "rows": [
+                {
+                    "recommendation_date": "2025-01-20",
+                    "exit_date": "2025-01-25",
+                    "ticker": "AAPL",
+                    "entry_price": 100.0,
+                    "exit_price": 110.0,
+                    "return_pct": 0.1,
+                    "benchmark_return_pct": 0.02,
+                    "excess_return_pct": 0.08,
+                    "is_win": True,
+                }
+            ],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--tickers",
+            "AAPL,MSFT",
+            "--benchmark",
+            "SPY",
+            "--start-date",
+            "2025-01-01",
+            "--end-date",
+            "2025-01-31",
+            "--holding-days",
+            "5",
+            "--top-n",
+            "2",
+            "--csv",
+            str(csv_path),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+
+    assert csv_path.exists()
+    csv_text = csv_path.read_text()
+    assert "recommendation_date,exit_date,ticker,entry_price,exit_price,return_pct,benchmark_return_pct,excess_return_pct,is_win" in csv_text
+    assert "AAPL" in csv_text
+    assert "tested_count=1" in captured.out
+
+
+def test_summary_only_still_allows_backtest_csv_export(monkeypatch, capsys, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/backtest_strategy.py"
+    csv_path = tmp_path / "backtest.csv"
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": {
+                "tested_count": 1,
+                "win_rate": 1.0,
+                "average_return": 0.1,
+                "average_benchmark_return": 0.02,
+                "average_excess_return": 0.08,
+                "best_ticker": "AAPL",
+                "worst_ticker": "AAPL",
+            },
+            "rows": [
+                {
+                    "recommendation_date": "2025-01-20",
+                    "exit_date": "2025-01-25",
+                    "ticker": "AAPL",
+                    "entry_price": 100.0,
+                    "exit_price": 110.0,
+                    "return_pct": 0.1,
+                    "benchmark_return_pct": 0.02,
+                    "excess_return_pct": 0.08,
+                    "is_win": True,
+                }
+            ],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--tickers",
+            "AAPL,MSFT",
+            "--benchmark",
+            "SPY",
+            "--start-date",
+            "2025-01-01",
+            "--end-date",
+            "2025-01-31",
+            "--holding-days",
+            "5",
+            "--top-n",
+            "2",
+            "--summary-only",
+            "--csv",
+            str(csv_path),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+
+    assert csv_path.exists()
+    csv_text = csv_path.read_text()
+    assert "AAPL" in csv_text
+    assert "recommendation_date=" not in captured.out
+
+
 def test_add_days_handles_timezone_datetime_string():
     assert _add_days("2026-02-24 00:00:00-05:00", 5) == "2026-03-01"
 

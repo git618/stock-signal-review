@@ -110,3 +110,38 @@ def test_list_recommendations_script_accepts_argparse_options(monkeypatch, capsy
 
     assert "AAPL" in captured.out or "MSFT" in captured.out
     assert not ("AAPL" in captured.out and "MSFT" in captured.out)
+
+
+def test_list_recommendations_script_writes_csv_when_requested(monkeypatch, capsys, tmp_path):
+    db_path = tmp_path / "custom.db"
+    csv_path = tmp_path / "recommendations.csv"
+    initialize_database(db_path)
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-10",
+        strategy_version="v1",
+        recommendations=[
+            {"ticker": "AAPL", "score": 0.91, "rank": 1, "entry_price": 150.0},
+        ],
+    )
+
+    script_path = Path(__file__).resolve().parent.parent / "scripts/list_recommendations.py"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--db",
+            str(db_path),
+            "--csv",
+            str(csv_path),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+
+    assert csv_path.exists()
+    csv_text = csv_path.read_text()
+    assert "trading_date,rank,symbol,score,entry_price,strategy_version" in csv_text
+    assert "AAPL" in csv_text
+    assert f"Wrote CSV: {csv_path}" in captured.out

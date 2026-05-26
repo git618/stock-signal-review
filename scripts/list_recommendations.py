@@ -1,6 +1,7 @@
 """List saved recommendations from SQLite."""
 
 import argparse
+import csv
 from pathlib import Path
 import os
 import sqlite3
@@ -21,6 +22,11 @@ def main(argv=None):
     db_path = Path(args.db)
     initialize_database(db_path)
     rows = _read_recommendations(db_path, args.limit)
+
+    if args.csv:
+        csv_path = Path(args.csv)
+        _write_csv(csv_path, rows)
+        print(f"Wrote CSV: {csv_path}")
 
     if not rows:
         print("No recommendations found.")
@@ -48,6 +54,7 @@ def _parse_args(argv):
         default=os.environ.get("STOCK_RESEARCH_DB_PATH", str(DEFAULT_DB_PATH)),
     )
     parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument("--csv")
     return parser.parse_known_args(argv)[0]
 
 
@@ -78,6 +85,22 @@ def _read_recommendations(db_path, limit):
         }
         for row in rows
     ]
+
+
+def _write_csv(csv_path, rows):
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "trading_date",
+        "rank",
+        "symbol",
+        "score",
+        "entry_price",
+        "strategy_version",
+    ]
+    with csv_path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 if __name__ == "__main__":

@@ -482,6 +482,58 @@ def test_weekly_review_script_prints_empty_state_when_no_mature_recommendations(
     assert "No recommendations ready for review." in captured.out
 
 
+def test_weekly_review_script_writes_csv_when_requested(monkeypatch, capsys, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/generate_weekly_review.py"
+    csv_path = tmp_path / "weekly_review.csv"
+
+    def fake_generate_weekly_review(**kwargs):
+        return {
+            "summary": {
+                "reviewed_count": 1,
+                "win_count": 1,
+                "loss_count": 0,
+                "win_rate": 1.0,
+                "average_return": 0.1,
+                "average_benchmark_return": 0.02,
+                "average_excess_return": 0.08,
+                "best_ticker": "AAPL",
+                "worst_ticker": "AAPL",
+            },
+            "rows": [
+                {
+                    "ticker": "AAPL",
+                    "entry_price": 100.0,
+                    "exit_price": 110.0,
+                    "return_pct": 0.1,
+                    "benchmark_return_pct": 0.02,
+                    "excess_return_pct": 0.08,
+                    "is_win": True,
+                }
+            ],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.review.generate_weekly_review", fake_generate_weekly_review)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--csv",
+            str(csv_path),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+
+    assert csv_path.exists()
+    csv_text = csv_path.read_text()
+    assert "ticker,entry_price,exit_price,return_pct,benchmark_return_pct,excess_return_pct,is_win" in csv_text
+    assert "AAPL" in csv_text
+    assert "reviewed_count=1" in captured.out
+
+
 class FakeMarketDataProvider:
     def __init__(self, prices_by_ticker):
         self.prices_by_ticker = prices_by_ticker

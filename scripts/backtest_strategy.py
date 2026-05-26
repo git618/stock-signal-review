@@ -1,6 +1,7 @@
 """Run a simple historical backtest for the current strategy."""
 
 import argparse
+import csv
 from pathlib import Path
 import sys
 
@@ -25,6 +26,11 @@ def main(argv=None):
         holding_days=args.holding_days,
         top_n=args.top_n,
     )
+
+    if args.csv:
+        csv_path = Path(args.csv)
+        _write_csv(csv_path, result["rows"])
+        print(f"Wrote CSV: {csv_path}")
 
     summary = result["summary"]
     print(f"tested_count={summary.get('tested_count')}")
@@ -68,6 +74,7 @@ def _parse_args(argv):
     parser.add_argument("--top-n", type=int, default=5)
     parser.add_argument("--summary-only", action="store_true")
     parser.add_argument("--max-rows", type=int)
+    parser.add_argument("--csv")
     return parser.parse_known_args(argv)[0]
 
 
@@ -75,6 +82,25 @@ def _normalize_tickers(raw_tickers):
     if len(raw_tickers) == 1 and "," in raw_tickers[0]:
         return [ticker.strip() for ticker in raw_tickers[0].split(",") if ticker.strip()]
     return raw_tickers
+
+
+def _write_csv(csv_path, rows):
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "recommendation_date",
+        "exit_date",
+        "ticker",
+        "entry_price",
+        "exit_price",
+        "return_pct",
+        "benchmark_return_pct",
+        "excess_return_pct",
+        "is_win",
+    ]
+    with csv_path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 if __name__ == "__main__":
