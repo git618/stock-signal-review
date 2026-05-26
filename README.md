@@ -86,6 +86,41 @@ python scripts/reset_database.py --db data/stock_research.db
 Options:
 - `--db`: SQLite database path to delete and recreate
 
+### `backtest_strategy.py`
+
+```bash
+python scripts/backtest_strategy.py \
+  --tickers AAPL MSFT NVDA \
+  --benchmark SPY \
+  --start-date 2026-02-24 \
+  --end-date 2026-05-25 \
+  --holding-days 5 \
+  --top-n 2
+```
+
+Compact output example:
+
+```bash
+python scripts/backtest_strategy.py \
+  --tickers AAPL MSFT NVDA \
+  --benchmark SPY \
+  --start-date 2026-02-24 \
+  --end-date 2026-05-25 \
+  --holding-days 5 \
+  --top-n 2 \
+  --summary-only
+```
+
+Options:
+- `--tickers`: ticker list, either space-separated or comma-separated
+- `--benchmark`: benchmark ticker
+- `--start-date`: backtest start date
+- `--end-date`: backtest end date
+- `--holding-days`: forward holding period used for return measurement
+- `--top-n`: number of recommendations selected on each recommendation date
+- `--summary-only`: print only the summary block
+- `--max-rows`: cap the number of detailed result rows printed
+
 ## Current Limitations
 
 - Uses `yfinance` and daily historical data only
@@ -94,6 +129,7 @@ Options:
 - No profit guarantees
 - Weekly review only works once recommendations are mature enough
 - Free market data can fail, be delayed, or return incomplete data
+- Backtest uses historical daily data and the current scoring rules; it is for research only and does not prove future profitability
 
 ## Development Workflow
 
