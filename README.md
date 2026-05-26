@@ -122,6 +122,36 @@ python scripts/backtest_strategy.py \
   --top-n 2
 ```
 
+Multi-strategy comparison:
+- Use [config/default.json](/home/king/stock-signal-review/config/default.json), [config/momentum.json](/home/king/stock-signal-review/config/momentum.json), and [config/low_volatility.json](/home/king/stock-signal-review/config/low_volatility.json) as comparable research presets.
+- `scripts/compare_strategies.py` runs one backtest per config and prints one summary row per strategy.
+- Optional CSV export writes the same summary columns to a local file.
+
+Example:
+
+```bash
+python scripts/compare_strategies.py \
+  --configs config/default.json config/momentum.json config/low_volatility.json \
+  --csv data/strategy_comparison.csv
+```
+
+Comparison output fields:
+- `config`
+- `strategy_version`
+- `tested_count`
+- `win_count`
+- `loss_count`
+- `win_rate`
+- `average_return`
+- `average_benchmark_return`
+- `average_excess_return`
+- `median_return`
+- `median_excess_return`
+- `best_ticker`
+- `worst_ticker`
+- `best_return`
+- `worst_return`
+
 ## CLI Options
 
 ### `generate_daily_recommendations.py`
