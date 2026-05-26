@@ -204,6 +204,23 @@ The weekly review CSV includes:
 - Backtest uses historical daily data and the current scoring rules; it is for research only and does not prove future profitability
 - Generated CSV files under `data/*.csv` are local outputs and are ignored by Git
 
+## v0.1 Status
+
+What works:
+- local SQLite-backed recommendation storage
+- daily recommendation generation
+- recommendation listing
+- weekly review with maturity filtering
+- historical backtest workflow
+- CSV export for research outputs
+- Makefile shortcuts for common workflows
+
+Operational notes:
+- this project is local-only and intended for research workflows
+- it does not execute trades
+- it does not integrate with a broker
+- market data comes from `yfinance` and other free data paths can fail, be delayed, or return incomplete results
+
 ## Development Workflow
 
 - TDD first
