@@ -84,8 +84,13 @@ python scripts/generate_weekly_review.py \
 Options:
 - `--db`: SQLite database path
 - `--benchmark`: benchmark ticker
-- `--review-horizon-days`: minimum holding period before a recommendation is considered reviewable
+- `--review-horizon-days`: minimum holding period in trading days before a recommendation is considered reviewable
 - `--csv`: write per-row weekly review results to CSV while still printing the summary or empty-state message
+
+Trading-day review notes:
+- Weekly review uses trading-day exit dates from the available price rows where applicable.
+- Weekends and non-trading days are skipped automatically because they do not appear in the fetched rows.
+- If there are not enough future trading days available, that review row is skipped gracefully.
 
 ### `list_recommendations.py`
 
@@ -167,7 +172,7 @@ Options:
 - `--benchmark`: benchmark ticker
 - `--start-date`: backtest start date
 - `--end-date`: backtest end date
-- `--holding-days`: forward holding period used for return measurement
+- `--holding-days`: forward holding period in trading days used for return measurement
 - `--top-n`: number of recommendations selected on each recommendation date
 - `--summary-only`: print only the summary block
 - `--max-rows`: cap the number of detailed result rows printed
@@ -177,6 +182,12 @@ Backtest CSV export notes:
 - writes detailed backtest rows to CSV
 - `--summary-only` affects terminal output only
 - CSV still includes the detailed result rows even when `--summary-only` is used
+
+Trading-day backtest notes:
+- Backtest holding periods use available trading days from the price data, not calendar days.
+- `--holding-days` means trading days. For example, `--holding-days 5` means the fifth future trading day after the recommendation date.
+- Weekends and non-trading gaps are skipped automatically because they do not appear in the price rows.
+- If there are not enough future trading days available, that backtest row is skipped gracefully.
 
 Weekly review CSV export example:
 
@@ -199,7 +210,7 @@ The weekly review CSV includes:
 - No real-time trading
 - No broker integration
 - No profit guarantees
-- Weekly review only works once recommendations are mature enough
+- Weekly review only works once recommendations are mature enough in trading-day terms
 - Free market data can fail, be delayed, or return incomplete data
 - Backtest uses historical daily data and the current scoring rules; it is for research only and does not prove future profitability
 - Generated CSV files under `data/*.csv` are local outputs and are ignored by Git
