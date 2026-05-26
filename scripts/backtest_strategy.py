@@ -36,7 +36,14 @@ def main(argv=None):
     print(f"worst_ticker={summary.get('worst_ticker')}")
     print()
 
-    for row in result["rows"]:
+    if args.summary_only:
+        return 0
+
+    rows = result["rows"]
+    if args.max_rows is not None:
+        rows = rows[: args.max_rows]
+
+    for row in rows:
         print(f"recommendation_date={row['recommendation_date']}")
         print(f"exit_date={row['exit_date']}")
         print(f"ticker={row['ticker']}")
@@ -59,6 +66,8 @@ def _parse_args(argv):
     parser.add_argument("--end-date", required=True)
     parser.add_argument("--holding-days", type=int, default=5)
     parser.add_argument("--top-n", type=int, default=5)
+    parser.add_argument("--summary-only", action="store_true")
+    parser.add_argument("--max-rows", type=int)
     return parser.parse_known_args(argv)[0]
 
 
