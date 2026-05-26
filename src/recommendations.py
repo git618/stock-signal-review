@@ -60,6 +60,8 @@ def generate_daily_recommendations(
     database_path=None,
     provider=None,
     price_history_by_ticker=None,
+    strategy_version=None,
+    strategy_weights=None,
 ):
     db_path = db_path if db_path is not None else database_path
     initialize_database(db_path)
@@ -67,8 +69,9 @@ def generate_daily_recommendations(
 
     provider = provider or YFinanceMarketDataProvider()
     strategy = WeightedStrategy(
-        version="v1",
-        weights={
+        version=strategy_version or "v1",
+        weights=strategy_weights
+        or {
             "return_20d": 0.5,
             "return_5d": 0.3,
             "volume_ratio_20d": 0.2,

@@ -25,6 +25,8 @@ def main(argv=None):
         end_date=end_date,
         holding_days=args.holding_days if args.holding_days is not None else config["holding_days"],
         top_n=args.top_n if args.top_n is not None else config["top_n"],
+        strategy_version=config["strategy"]["version"],
+        strategy_weights=config["strategy"]["weights"],
     )
 
     if args.csv:

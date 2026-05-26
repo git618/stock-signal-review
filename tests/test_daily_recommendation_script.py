@@ -158,6 +158,13 @@ def test_manual_script_exists_and_uses_default_ticker_list(monkeypatch, tmp_path
         "start_date": captured["start_date"],
         "end_date": captured["end_date"],
         "db_path": Path("data/stock_research.db"),
+        "strategy_version": "v1",
+        "strategy_weights": {
+            "return_20d": 0.4,
+            "return_5d": 0.2,
+            "volume_ratio_20d": 0.2,
+            "volatility_20d": -0.2,
+        },
     }
 
 
@@ -198,6 +205,13 @@ def test_daily_script_accepts_argparse_options(monkeypatch, tmp_path):
         "start_date": captured["start_date"],
         "end_date": captured["end_date"],
         "db_path": Path("custom.db"),
+        "strategy_version": "v1",
+        "strategy_weights": {
+            "return_20d": 0.4,
+            "return_5d": 0.2,
+            "volume_ratio_20d": 0.2,
+            "volatility_20d": -0.2,
+        },
     }
 
 
@@ -241,6 +255,12 @@ def test_daily_script_uses_config_tickers_and_benchmark(monkeypatch, tmp_path):
         "start_date": captured["start_date"],
         "end_date": captured["end_date"],
         "db_path": Path("configured.db"),
+        "strategy_version": "v1",
+        "strategy_weights": {
+            "return_20d": 0.5,
+            "return_5d": 0.3,
+            "volume_ratio_20d": 0.2,
+        },
     }
 
 
@@ -292,7 +312,83 @@ def test_daily_script_cli_arguments_override_config_values(monkeypatch, tmp_path
         "start_date": captured["start_date"],
         "end_date": captured["end_date"],
         "db_path": Path("override.db"),
+        "strategy_version": "v1",
+        "strategy_weights": {
+            "return_20d": 0.5,
+            "return_5d": 0.3,
+            "volume_ratio_20d": 0.2,
+        },
     }
+
+
+def test_custom_strategy_version_is_used_in_generated_recommendations(tmp_path):
+    db_path = tmp_path / "research.db"
+    tickers = ["AAPL", "MSFT", "SPY"]
+    price_history = {
+        "AAPL": _price_rows(100.0, 2.0, 1000),
+        "MSFT": _price_rows(100.0, 1.5, 1000),
+        "SPY": _price_rows(100.0, 0.2, 1000),
+    }
+
+    recommendations = generate_daily_recommendations(
+        tickers=tickers,
+        benchmark_ticker="SPY",
+        start_date="2025-01-01",
+        end_date="2025-01-20",
+        db_path=db_path,
+        price_history_by_ticker=price_history,
+        strategy_version="v9",
+        strategy_weights={
+            "return_20d": 0.5,
+            "return_5d": 0.3,
+            "volume_ratio_20d": 0.2,
+        },
+    )
+
+    assert recommendations[0]["strategy_version"] == "v9"
+
+
+def test_changing_strategy_weights_changes_scoring_order_deterministically(tmp_path):
+    db_path = tmp_path / "research.db"
+    tickers = ["AAPL", "MSFT", "SPY"]
+    price_history = {
+        "AAPL": _price_rows(100.0, 3.0, 1000),
+        "MSFT": _price_rows(100.0, 1.0, 1000),
+        "SPY": _price_rows(100.0, 0.2, 1000),
+    }
+
+    default_recommendations = generate_daily_recommendations(
+        tickers=tickers,
+        benchmark_ticker="SPY",
+        start_date="2025-01-01",
+        end_date="2025-01-20",
+        db_path=db_path,
+        price_history_by_ticker=price_history,
+        strategy_version="v1",
+        strategy_weights={
+            "return_20d": 0.5,
+            "return_5d": 0.3,
+            "volume_ratio_20d": 0.2,
+        },
+    )
+    volatility_weighted_recommendations = generate_daily_recommendations(
+        tickers=tickers,
+        benchmark_ticker="SPY",
+        start_date="2025-01-01",
+        end_date="2025-01-20",
+        db_path=db_path,
+        price_history_by_ticker=price_history,
+        strategy_version="v2",
+        strategy_weights={
+            "return_20d": 0.0,
+            "return_5d": 0.0,
+            "volume_ratio_20d": 0.0,
+            "volatility_20d": -1.0,
+        },
+    )
+
+    assert default_recommendations[0]["ticker"] == "AAPL"
+    assert volatility_weighted_recommendations[0]["ticker"] == "MSFT"
 
 
 def test_generate_daily_recommendations_excludes_benchmark_ticker(tmp_path):

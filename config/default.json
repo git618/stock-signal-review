@@ -7,5 +7,14 @@
   "review_horizon_days": 5,
   "database_path": "data/stock_research.db",
   "backtest_start_date": "2026-02-24",
-  "backtest_end_date": "2026-05-25"
+  "backtest_end_date": "2026-05-25",
+  "strategy": {
+    "version": "v1",
+    "weights": {
+      "return_20d": 0.4,
+      "return_5d": 0.2,
+      "volume_ratio_20d": 0.2,
+      "volatility_20d": -0.2
+    }
+  }
 }

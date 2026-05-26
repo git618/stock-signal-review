@@ -31,6 +31,8 @@ def main(argv=None):
         start_date=start_date.isoformat(),
         end_date=end_date.isoformat(),
         db_path=db_path,
+        strategy_version=config["strategy"]["version"],
+        strategy_weights=config["strategy"]["weights"],
     )
 
     for recommendation in recommendations:

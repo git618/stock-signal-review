@@ -145,6 +145,13 @@ def test_backtest_script_accepts_cli_options(monkeypatch, tmp_path):
         "end_date": "2025-01-31",
         "holding_days": 5,
         "top_n": 3,
+        "strategy_version": "v1",
+        "strategy_weights": {
+            "return_20d": 0.4,
+            "return_5d": 0.2,
+            "volume_ratio_20d": 0.2,
+            "volatility_20d": -0.2,
+        },
     }
 
 
@@ -188,6 +195,12 @@ def test_backtest_script_uses_config_values(monkeypatch, tmp_path):
         "end_date": "2025-01-31",
         "holding_days": 7,
         "top_n": 4,
+        "strategy_version": "v1",
+        "strategy_weights": {
+            "return_20d": 0.5,
+            "return_5d": 0.3,
+            "volume_ratio_20d": 0.2,
+        },
     }
 
 
@@ -243,6 +256,12 @@ def test_backtest_script_cli_overrides_config_values(monkeypatch, tmp_path):
         "end_date": "2025-01-31",
         "holding_days": 5,
         "top_n": 2,
+        "strategy_version": "v1",
+        "strategy_weights": {
+            "return_20d": 0.5,
+            "return_5d": 0.3,
+            "volume_ratio_20d": 0.2,
+        },
     }
 
 
@@ -287,6 +306,12 @@ def test_backtest_script_runs_with_config_only(monkeypatch, tmp_path):
         "end_date": "2025-02-28",
         "holding_days": 7,
         "top_n": 4,
+        "strategy_version": "v1",
+        "strategy_weights": {
+            "return_20d": 0.5,
+            "return_5d": 0.3,
+            "volume_ratio_20d": 0.2,
+        },
     }
 
 
@@ -332,6 +357,12 @@ def test_backtest_script_fallback_derives_dates_from_lookback_days(monkeypatch, 
         "end_date": expected_end,
         "holding_days": 7,
         "top_n": 4,
+        "strategy_version": "v1",
+        "strategy_weights": {
+            "return_20d": 0.5,
+            "return_5d": 0.3,
+            "volume_ratio_20d": 0.2,
+        },
     }
 
 
@@ -362,6 +393,13 @@ def test_backtest_script_explicit_cli_dates_still_work_without_config(monkeypatc
 
     assert captured["start_date"] == "2026-02-24"
     assert captured["end_date"] == "2026-05-25"
+    assert captured["strategy_version"] == "v1"
+    assert captured["strategy_weights"] == {
+        "return_20d": 0.4,
+        "return_5d": 0.2,
+        "volume_ratio_20d": 0.2,
+        "volatility_20d": -0.2,
+    }
 
 
 def test_backtest_script_accepts_summary_only(monkeypatch, tmp_path):
@@ -404,6 +442,13 @@ def test_backtest_script_accepts_summary_only(monkeypatch, tmp_path):
         "end_date": "2025-01-31",
         "holding_days": 5,
         "top_n": 2,
+        "strategy_version": "v1",
+        "strategy_weights": {
+            "return_20d": 0.4,
+            "return_5d": 0.2,
+            "volume_ratio_20d": 0.2,
+            "volatility_20d": -0.2,
+        },
     }
 
 
@@ -520,6 +565,13 @@ def test_backtest_script_accepts_max_rows(monkeypatch, tmp_path):
         "end_date": "2025-01-31",
         "holding_days": 5,
         "top_n": 2,
+        "strategy_version": "v1",
+        "strategy_weights": {
+            "return_20d": 0.4,
+            "return_5d": 0.2,
+            "volume_ratio_20d": 0.2,
+            "volatility_20d": -0.2,
+        },
     }
 
 

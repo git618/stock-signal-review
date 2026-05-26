@@ -19,6 +19,14 @@ DEFAULT_CONFIG = {
     "database_path": "data/stock_research.db",
     "backtest_start_date": None,
     "backtest_end_date": None,
+    "strategy": {
+        "version": "v1",
+        "weights": {
+            "return_20d": 0.5,
+            "return_5d": 0.3,
+            "volume_ratio_20d": 0.2,
+        },
+    },
 }
 
 
@@ -38,4 +46,22 @@ def load_config(path=None):
 
     merged = dict(DEFAULT_CONFIG)
     merged.update(loaded)
+    merged["strategy"] = _merge_strategy_config(
+        DEFAULT_CONFIG["strategy"],
+        loaded.get("strategy"),
+    )
+    return merged
+
+
+def _merge_strategy_config(default_strategy, loaded_strategy):
+    merged = {
+        "version": default_strategy["version"],
+        "weights": dict(default_strategy["weights"]),
+    }
+    if not loaded_strategy:
+        return merged
+    if "version" in loaded_strategy:
+        merged["version"] = loaded_strategy["version"]
+    if "weights" in loaded_strategy:
+        merged["weights"].update(loaded_strategy["weights"])
     return merged

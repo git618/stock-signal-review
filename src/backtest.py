@@ -19,11 +19,14 @@ def run_backtest(
     top_n,
     provider=None,
     price_history_by_ticker=None,
+    strategy_version=None,
+    strategy_weights=None,
 ):
     provider = provider or YFinanceMarketDataProvider()
     strategy = WeightedStrategy(
-        version="v1",
-        weights={
+        version=strategy_version or "v1",
+        weights=strategy_weights
+        or {
             "return_20d": 0.5,
             "return_5d": 0.3,
             "volume_ratio_20d": 0.2,

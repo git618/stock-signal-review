@@ -20,6 +20,15 @@ def test_load_config_loads_default_json():
         "database_path": "data/stock_research.db",
         "backtest_start_date": "2026-02-24",
         "backtest_end_date": "2026-05-25",
+        "strategy": {
+            "version": "v1",
+            "weights": {
+                "return_20d": 0.4,
+                "return_5d": 0.2,
+                "volume_ratio_20d": 0.2,
+                "volatility_20d": -0.2,
+            },
+        },
     }
 
 
@@ -51,6 +60,14 @@ def test_load_config_loads_custom_config_file(tmp_path):
         "database_path": "data/custom.db",
         "backtest_start_date": None,
         "backtest_end_date": None,
+        "strategy": {
+            "version": "v1",
+            "weights": {
+                "return_20d": 0.5,
+                "return_5d": 0.3,
+                "volume_ratio_20d": 0.2,
+            },
+        },
     }
 
 
@@ -76,6 +93,14 @@ def test_load_config_missing_optional_keys_fall_back_to_defaults(tmp_path):
         "database_path": "data/stock_research.db",
         "backtest_start_date": None,
         "backtest_end_date": None,
+        "strategy": {
+            "version": "v1",
+            "weights": {
+                "return_20d": 0.5,
+                "return_5d": 0.3,
+                "volume_ratio_20d": 0.2,
+            },
+        },
     }
 
 
@@ -92,3 +117,34 @@ def test_load_config_missing_file_raises_file_not_found_error(tmp_path):
 
     with pytest.raises(FileNotFoundError):
         load_config(missing_path)
+
+
+def test_load_config_custom_strategy_weights_are_loaded(tmp_path):
+    config_path = tmp_path / "custom.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "strategy": {
+                    "version": "v9",
+                    "weights": {
+                        "return_20d": 0.1,
+                        "return_5d": 0.1,
+                        "volume_ratio_20d": 0.1,
+                        "volatility_20d": -0.7,
+                    },
+                }
+            }
+        )
+    )
+
+    config = load_config(config_path)
+
+    assert config["strategy"] == {
+        "version": "v9",
+        "weights": {
+            "return_20d": 0.1,
+            "return_5d": 0.1,
+            "volume_ratio_20d": 0.1,
+            "volatility_20d": -0.7,
+        },
+    }
