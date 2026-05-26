@@ -9,25 +9,28 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.config import load_config
 from src.recommendations import generate_daily_recommendations
-
-
-DEFAULT_TICKERS = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "SPY"]
-DEFAULT_BENCHMARK = "SPY"
-DEFAULT_DB_PATH = Path("data/stock_research.db")
 
 
 def main(argv=None):
     args = _parse_args(argv)
+    config = load_config(args.config)
+    lookback_days = args.lookback_days
+    if lookback_days is None:
+        lookback_days = config["lookback_days"]
     end_date = date.today()
-    start_date = end_date - timedelta(days=args.lookback_days)
+    start_date = end_date - timedelta(days=lookback_days)
+    db_path = Path(args.db if args.db is not None else config["database_path"])
+    tickers = _normalize_tickers(args.tickers) if args.tickers is not None else config["tickers"]
+    benchmark = args.benchmark if args.benchmark is not None else config["benchmark"]
 
     recommendations = generate_daily_recommendations(
-        tickers=_normalize_tickers(args.tickers),
-        benchmark_ticker=args.benchmark,
+        tickers=tickers,
+        benchmark_ticker=benchmark,
         start_date=start_date.isoformat(),
         end_date=end_date.isoformat(),
-        db_path=Path(args.db),
+        db_path=db_path,
     )
 
     for recommendation in recommendations:
@@ -45,10 +48,11 @@ def main(argv=None):
 
 def _parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
-    parser.add_argument("--tickers", nargs="+", default=DEFAULT_TICKERS)
-    parser.add_argument("--benchmark", default=DEFAULT_BENCHMARK)
-    parser.add_argument("--lookback-days", type=int, default=90)
+    parser.add_argument("--config")
+    parser.add_argument("--db")
+    parser.add_argument("--tickers", nargs="+")
+    parser.add_argument("--benchmark")
+    parser.add_argument("--lookback-days", type=int)
     return parser.parse_known_args(argv)[0]
 
 

@@ -456,6 +456,7 @@ def test_weekly_review_script_exists_and_uses_default_benchmark(monkeypatch, tmp
         "start_date": captured["start_date"],
         "end_date": captured["end_date"],
         "benchmark_ticker": "SPY",
+        "review_horizon_days": 5,
     }
 
 
@@ -487,6 +488,45 @@ def test_weekly_review_script_accepts_argparse_options(monkeypatch, tmp_path):
 
     assert captured == {
         "db_path": Path("weekly.db"),
+        "start_date": captured["start_date"],
+        "end_date": captured["end_date"],
+        "benchmark_ticker": "QQQ",
+        "review_horizon_days": 7,
+    }
+
+
+def test_weekly_review_script_uses_config_database_and_benchmark(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/generate_weekly_review.py"
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        """{
+  "benchmark": "QQQ",
+  "review_horizon_days": 7,
+  "database_path": "configured.db"
+}"""
+    )
+    captured = {}
+
+    def fake_generate_weekly_review(**kwargs):
+        captured.update(kwargs)
+        return {"summary": {}, "rows": []}
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.review.generate_weekly_review", fake_generate_weekly_review)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--config",
+            str(config_path),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    assert captured == {
+        "db_path": Path("configured.db"),
         "start_date": captured["start_date"],
         "end_date": captured["end_date"],
         "benchmark_ticker": "QQQ",

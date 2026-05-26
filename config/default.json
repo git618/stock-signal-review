@@ -1,0 +1,9 @@
+{
+  "tickers": ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA"],
+  "benchmark": "SPY",
+  "lookback_days": 90,
+  "holding_days": 5,
+  "top_n": 5,
+  "review_horizon_days": 5,
+  "database_path": "data/stock_research.db"
+}

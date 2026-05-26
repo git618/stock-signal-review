@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.config import DEFAULT_DB_PATH
+from src.config import DEFAULT_DB_PATH, load_config
 from src.database import initialize_database
 
 # Shared default database path: data/stock_research.db
@@ -19,7 +19,16 @@ from src.database import initialize_database
 
 def main(argv=None):
     args = _parse_args(argv)
-    db_path = Path(args.db)
+    config = load_config(args.config) if args.config else None
+    db_path = Path(
+        args.db
+        if args.db is not None
+        else (
+            config["database_path"]
+            if config is not None
+            else os.environ.get("STOCK_RESEARCH_DB_PATH", str(DEFAULT_DB_PATH))
+        )
+    )
     initialize_database(db_path)
     rows = _read_recommendations(db_path, args.limit)
 
@@ -49,10 +58,8 @@ def main(argv=None):
 
 def _parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--db",
-        default=os.environ.get("STOCK_RESEARCH_DB_PATH", str(DEFAULT_DB_PATH)),
-    )
+    parser.add_argument("--config")
+    parser.add_argument("--db")
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument("--csv")
     return parser.parse_known_args(argv)[0]

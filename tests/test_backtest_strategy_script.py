@@ -147,6 +147,104 @@ def test_backtest_script_accepts_cli_options(monkeypatch, tmp_path):
     }
 
 
+def test_backtest_script_uses_config_values(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/backtest_strategy.py"
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        """{
+  "tickers": ["AAPL", "MSFT"],
+  "benchmark": "QQQ",
+  "holding_days": 7,
+  "top_n": 4
+}"""
+    )
+    captured = {}
+
+    def fake_run_backtest(**kwargs):
+        captured.update(kwargs)
+        return {"summary": {}, "rows": []}
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--config",
+            str(config_path),
+            "--start-date",
+            "2025-01-01",
+            "--end-date",
+            "2025-01-31",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    assert captured == {
+        "tickers": ["AAPL", "MSFT"],
+        "benchmark_ticker": "QQQ",
+        "start_date": "2025-01-01",
+        "end_date": "2025-01-31",
+        "holding_days": 7,
+        "top_n": 4,
+    }
+
+
+def test_backtest_script_cli_overrides_config_values(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/backtest_strategy.py"
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        """{
+  "tickers": ["AAPL", "MSFT"],
+  "benchmark": "QQQ",
+  "holding_days": 7,
+  "top_n": 4
+}"""
+    )
+    captured = {}
+
+    def fake_run_backtest(**kwargs):
+        captured.update(kwargs)
+        return {"summary": {}, "rows": []}
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--config",
+            str(config_path),
+            "--tickers",
+            "NVDA,TSLA",
+            "--benchmark",
+            "SPY",
+            "--holding-days",
+            "5",
+            "--top-n",
+            "2",
+            "--start-date",
+            "2025-01-01",
+            "--end-date",
+            "2025-01-31",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    assert captured == {
+        "tickers": ["NVDA", "TSLA"],
+        "benchmark_ticker": "SPY",
+        "start_date": "2025-01-01",
+        "end_date": "2025-01-31",
+        "holding_days": 5,
+        "top_n": 2,
+    }
+
+
 def test_backtest_script_accepts_summary_only(monkeypatch, tmp_path):
     script_path = Path(__file__).resolve().parent.parent / "scripts/backtest_strategy.py"
     captured = {}

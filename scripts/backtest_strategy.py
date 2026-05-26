@@ -9,22 +9,20 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.config import load_config
 from src.backtest import run_backtest
-
-
-DEFAULT_TICKERS = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "SPY"]
-DEFAULT_BENCHMARK = "SPY"
 
 
 def main(argv=None):
     args = _parse_args(argv)
+    config = load_config(args.config)
     result = run_backtest(
-        tickers=_normalize_tickers(args.tickers),
-        benchmark_ticker=args.benchmark,
+        tickers=_normalize_tickers(args.tickers) if args.tickers is not None else config["tickers"],
+        benchmark_ticker=args.benchmark if args.benchmark is not None else config["benchmark"],
         start_date=args.start_date,
         end_date=args.end_date,
-        holding_days=args.holding_days,
-        top_n=args.top_n,
+        holding_days=args.holding_days if args.holding_days is not None else config["holding_days"],
+        top_n=args.top_n if args.top_n is not None else config["top_n"],
     )
 
     if args.csv:
@@ -72,12 +70,13 @@ def main(argv=None):
 
 def _parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--tickers", nargs="+", default=DEFAULT_TICKERS)
-    parser.add_argument("--benchmark", default=DEFAULT_BENCHMARK)
+    parser.add_argument("--config")
+    parser.add_argument("--tickers", nargs="+")
+    parser.add_argument("--benchmark")
     parser.add_argument("--start-date", required=True)
     parser.add_argument("--end-date", required=True)
-    parser.add_argument("--holding-days", type=int, default=5)
-    parser.add_argument("--top-n", type=int, default=5)
+    parser.add_argument("--holding-days", type=int)
+    parser.add_argument("--top-n", type=int)
     parser.add_argument("--summary-only", action="store_true")
     parser.add_argument("--max-rows", type=int)
     parser.add_argument("--csv")

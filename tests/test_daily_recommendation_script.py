@@ -153,7 +153,7 @@ def test_manual_script_exists_and_uses_default_ticker_list(monkeypatch, tmp_path
     runpy.run_path(str(script_path), run_name="__main__")
 
     assert captured == {
-        "tickers": ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "SPY"],
+        "tickers": ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA"],
         "benchmark_ticker": "SPY",
         "start_date": captured["start_date"],
         "end_date": captured["end_date"],
@@ -198,6 +198,100 @@ def test_daily_script_accepts_argparse_options(monkeypatch, tmp_path):
         "start_date": captured["start_date"],
         "end_date": captured["end_date"],
         "db_path": Path("custom.db"),
+    }
+
+
+def test_daily_script_uses_config_tickers_and_benchmark(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/generate_daily_recommendations.py"
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        """{
+  "tickers": ["AAPL", "MSFT"],
+  "benchmark": "QQQ",
+  "lookback_days": 45,
+  "database_path": "configured.db"
+}"""
+    )
+    captured = {}
+
+    def fake_generate_daily_recommendations(**kwargs):
+        captured.update(kwargs)
+        return []
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr(
+        "src.recommendations.generate_daily_recommendations",
+        fake_generate_daily_recommendations,
+    )
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--config",
+            str(config_path),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    assert captured == {
+        "tickers": ["AAPL", "MSFT"],
+        "benchmark_ticker": "QQQ",
+        "start_date": captured["start_date"],
+        "end_date": captured["end_date"],
+        "db_path": Path("configured.db"),
+    }
+
+
+def test_daily_script_cli_arguments_override_config_values(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/generate_daily_recommendations.py"
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        """{
+  "tickers": ["AAPL", "MSFT"],
+  "benchmark": "QQQ",
+  "lookback_days": 45,
+  "database_path": "configured.db"
+}"""
+    )
+    captured = {}
+
+    def fake_generate_daily_recommendations(**kwargs):
+        captured.update(kwargs)
+        return []
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr(
+        "src.recommendations.generate_daily_recommendations",
+        fake_generate_daily_recommendations,
+    )
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--config",
+            str(config_path),
+            "--tickers",
+            "NVDA,TSLA",
+            "--benchmark",
+            "SPY",
+            "--db",
+            "override.db",
+            "--lookback-days",
+            "30",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    assert captured == {
+        "tickers": ["NVDA", "TSLA"],
+        "benchmark_ticker": "SPY",
+        "start_date": captured["start_date"],
+        "end_date": captured["end_date"],
+        "db_path": Path("override.db"),
     }
 
 
