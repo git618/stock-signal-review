@@ -34,12 +34,18 @@ def main(argv=None):
 
     summary = result["summary"]
     print(f"tested_count={summary.get('tested_count')}")
+    print(f"win_count={summary.get('win_count')}")
+    print(f"loss_count={summary.get('loss_count')}")
     print(f"win_rate={summary.get('win_rate')}")
     print(f"average_return={summary.get('average_return')}")
     print(f"average_benchmark_return={summary.get('average_benchmark_return')}")
     print(f"average_excess_return={summary.get('average_excess_return')}")
+    print(f"median_return={summary.get('median_return')}")
+    print(f"median_excess_return={summary.get('median_excess_return')}")
     print(f"best_ticker={summary.get('best_ticker')}")
     print(f"worst_ticker={summary.get('worst_ticker')}")
+    print(f"best_return={summary.get('best_return')}")
+    print(f"worst_return={summary.get('worst_return')}")
     print()
 
     if args.summary_only:

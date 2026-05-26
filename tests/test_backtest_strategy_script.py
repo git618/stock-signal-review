@@ -28,8 +28,59 @@ def test_run_backtest_returns_summary_from_mocked_price_history():
     assert "average_return" in result["summary"]
     assert "average_benchmark_return" in result["summary"]
     assert "average_excess_return" in result["summary"]
+    assert "median_return" in result["summary"]
+    assert "median_excess_return" in result["summary"]
     assert "best_ticker" in result["summary"]
     assert "worst_ticker" in result["summary"]
+    assert "best_return" in result["summary"]
+    assert "worst_return" in result["summary"]
+
+
+def test_run_backtest_summary_includes_median_values():
+    tickers = ["AAPL", "MSFT", "NVDA", "SPY"]
+    price_history = {
+        "AAPL": _price_rows(100.0, 2.0),
+        "MSFT": _price_rows(100.0, 1.0),
+        "NVDA": _price_rows(100.0, 3.0),
+        "SPY": _price_rows(100.0, 0.5),
+    }
+
+    result = run_backtest(
+        tickers=tickers,
+        benchmark_ticker="SPY",
+        start_date="2025-01-20",
+        end_date="2025-01-25",
+        holding_days=5,
+        top_n=2,
+        price_history_by_ticker=price_history,
+    )
+
+    assert isinstance(result["summary"]["median_return"], float)
+    assert isinstance(result["summary"]["median_excess_return"], float)
+
+
+def test_run_backtest_summary_includes_best_and_worst_return_values():
+    tickers = ["AAPL", "MSFT", "NVDA", "SPY"]
+    price_history = {
+        "AAPL": _price_rows(100.0, 2.0),
+        "MSFT": _price_rows(100.0, 1.0),
+        "NVDA": _price_rows(100.0, 3.0),
+        "SPY": _price_rows(100.0, 0.5),
+    }
+
+    result = run_backtest(
+        tickers=tickers,
+        benchmark_ticker="SPY",
+        start_date="2025-01-20",
+        end_date="2025-01-25",
+        holding_days=5,
+        top_n=2,
+        price_history_by_ticker=price_history,
+    )
+
+    assert isinstance(result["summary"]["best_return"], float)
+    assert isinstance(result["summary"]["worst_return"], float)
+    assert result["summary"]["best_return"] >= result["summary"]["worst_return"]
 
 
 def test_run_backtest_uses_only_data_available_on_recommendation_date():
@@ -146,12 +197,18 @@ def test_summary_only_suppresses_per_row_detail_output(monkeypatch, capsys, tmp_
         return {
             "summary": {
                 "tested_count": 2,
+                "win_count": 1,
+                "loss_count": 1,
                 "win_rate": 0.5,
                 "average_return": 0.1,
                 "average_benchmark_return": 0.02,
                 "average_excess_return": 0.08,
+                "median_return": 0.09,
+                "median_excess_return": 0.07,
                 "best_ticker": "AAPL",
                 "worst_ticker": "MSFT",
+                "best_return": 0.15,
+                "worst_return": 0.05,
             },
             "rows": [
                 {
@@ -195,6 +252,12 @@ def test_summary_only_suppresses_per_row_detail_output(monkeypatch, capsys, tmp_
     captured = capsys.readouterr()
 
     assert "tested_count=2" in captured.out
+    assert "win_count=1" in captured.out
+    assert "loss_count=1" in captured.out
+    assert "median_return=0.09" in captured.out
+    assert "median_excess_return=0.07" in captured.out
+    assert "best_return=0.15" in captured.out
+    assert "worst_return=0.05" in captured.out
     assert "recommendation_date=" not in captured.out
     assert "entry_price=" not in captured.out
 
@@ -389,12 +452,18 @@ def test_backtest_script_writes_csv_when_requested(monkeypatch, capsys, tmp_path
         return {
             "summary": {
                 "tested_count": 1,
+                "win_count": 1,
+                "loss_count": 0,
                 "win_rate": 1.0,
                 "average_return": 0.1,
                 "average_benchmark_return": 0.02,
                 "average_excess_return": 0.08,
+                "median_return": 0.1,
+                "median_excess_return": 0.08,
                 "best_ticker": "AAPL",
                 "worst_ticker": "AAPL",
+                "best_return": 0.1,
+                "worst_return": 0.1,
             },
             "rows": [
                 {
@@ -443,6 +512,63 @@ def test_backtest_script_writes_csv_when_requested(monkeypatch, capsys, tmp_path
     assert "recommendation_date,exit_date,ticker,entry_price,exit_price,return_pct,benchmark_return_pct,excess_return_pct,is_win" in csv_text
     assert "AAPL" in csv_text
     assert "tested_count=1" in captured.out
+
+
+def test_backtest_csv_export_headers_remain_unchanged(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/backtest_strategy.py"
+    csv_path = tmp_path / "backtest.csv"
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": {
+                "tested_count": 0,
+                "win_count": 0,
+                "loss_count": 0,
+                "win_rate": 0.0,
+                "average_return": 0.0,
+                "average_benchmark_return": 0.0,
+                "average_excess_return": 0.0,
+                "median_return": 0.0,
+                "median_excess_return": 0.0,
+                "best_ticker": None,
+                "worst_ticker": None,
+                "best_return": 0.0,
+                "worst_return": 0.0,
+            },
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--tickers",
+            "AAPL",
+            "--benchmark",
+            "SPY",
+            "--start-date",
+            "2025-01-01",
+            "--end-date",
+            "2025-01-31",
+            "--holding-days",
+            "5",
+            "--top-n",
+            "1",
+            "--csv",
+            str(csv_path),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    header = csv_path.read_text().splitlines()[0]
+    assert header == (
+        "recommendation_date,exit_date,ticker,entry_price,exit_price,"
+        "return_pct,benchmark_return_pct,excess_return_pct,is_win"
+    )
 
 
 def test_summary_only_still_allows_backtest_csv_export(monkeypatch, capsys, tmp_path):

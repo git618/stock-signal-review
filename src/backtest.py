@@ -2,6 +2,7 @@
 
 from datetime import date, timedelta
 from decimal import Decimal
+from statistics import median
 
 from src.features import calculate_features
 from src.market_data import YFinanceMarketDataProvider
@@ -130,8 +131,12 @@ def _build_summary(rows):
             "average_return": 0.0,
             "average_benchmark_return": 0.0,
             "average_excess_return": 0.0,
+            "median_return": 0.0,
+            "median_excess_return": 0.0,
             "best_ticker": None,
             "worst_ticker": None,
+            "best_return": 0.0,
+            "worst_return": 0.0,
         }
 
     tested_count = len(rows)
@@ -140,6 +145,8 @@ def _build_summary(rows):
     average_return = _average(row["return_pct"] for row in rows)
     average_benchmark_return = _average(row["benchmark_return_pct"] for row in rows)
     average_excess_return = _average(row["excess_return_pct"] for row in rows)
+    median_return = _median(row["return_pct"] for row in rows)
+    median_excess_return = _median(row["excess_return_pct"] for row in rows)
     best_row = max(rows, key=lambda row: row["return_pct"])
     worst_row = min(rows, key=lambda row: row["return_pct"])
 
@@ -152,8 +159,12 @@ def _build_summary(rows):
         "average_return": average_return,
         "average_benchmark_return": average_benchmark_return,
         "average_excess_return": average_excess_return,
+        "median_return": median_return,
+        "median_excess_return": median_excess_return,
         "best_ticker": best_row["ticker"],
         "worst_ticker": worst_row["ticker"],
+        "best_return": best_row["return_pct"],
+        "worst_return": worst_row["return_pct"],
     }
 
 
@@ -203,6 +214,11 @@ def _compute_return(entry_price, exit_price):
 def _average(values):
     values = list(values)
     return float(sum(Decimal(str(value)) for value in values) / Decimal(len(values)))
+
+
+def _median(values):
+    values = list(values)
+    return float(median(values))
 
 
 def _add_days(iso_date, days):
