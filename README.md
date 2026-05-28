@@ -369,6 +369,26 @@ The weekly review CSV includes:
 - `excess_return_pct`
 - `is_win`
 
+HTML report example:
+
+```bash
+python scripts/generate_report.py \
+  --output data/report.html \
+  --config config/default.json \
+  --strategy-configs config/default.json config/momentum.json config/low_volatility.json
+```
+
+The local HTML report:
+- writes a single static HTML file with no JavaScript or external CSS
+- includes sections for:
+  - project title and generated timestamp
+  - saved recommendations summary
+  - weekly review summary
+  - backtest summary
+  - strategy comparison summary
+- shows empty-state messages instead of failing when a section has no data
+- prints `Wrote report: <path>` after writing the file
+
 ## Current Limitations
 
 - Uses `yfinance` and daily historical data only
@@ -379,6 +399,7 @@ The weekly review CSV includes:
 - Free market data can fail, be delayed, or return incomplete data
 - Backtest uses historical daily data and the current scoring rules; it is for research only and does not prove future profitability
 - Generated CSV files under `data/*.csv` are local outputs and are ignored by Git
+- Generated HTML files under `data/*.html` are local outputs and are ignored by Git
 
 ## v0.1 Status
 
@@ -389,6 +410,7 @@ What works:
 - weekly review with maturity filtering
 - historical backtest workflow
 - CSV export for research outputs
+- local HTML report generation
 - Makefile shortcuts for common workflows
 
 Operational notes:
