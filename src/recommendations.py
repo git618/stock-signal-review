@@ -61,6 +61,50 @@ def signal_strength_for_score(score):
     return "weak"
 
 
+def build_recommendation_summary(recommendations):
+    if not recommendations:
+        return {
+            "market_signal_summary": "No recommendations available today.",
+            "best_candidate_summary": "Best relative candidate: none.",
+            "risk_summary": "Risk: no recommendation data is available to interpret.",
+        }
+
+    best_candidate = recommendations[0]
+    best_ticker = best_candidate["ticker"]
+    best_score = best_candidate["score"]
+
+    if any(recommendation["score"] > 1 for recommendation in recommendations):
+        market_signal_summary = "Strong signal detected."
+    elif any(recommendation["score"] > 0 for recommendation in recommendations):
+        market_signal_summary = "Positive but moderate signal today."
+    else:
+        market_signal_summary = "No strong buy signal today."
+
+    if best_score <= 0:
+        best_candidate_summary = (
+            f"Best relative candidate: {best_ticker}. Reason: {best_ticker} ranked highest among "
+            "the candidate universe, but its total score is still negative."
+        )
+        risk_summary = (
+            "Risk: all top recommendations have weak scores, so this should be treated as a watchlist, "
+            "not a strong buy signal."
+        )
+    else:
+        best_candidate_summary = (
+            f"Best relative candidate: {best_ticker}. Reason: {best_ticker} ranked highest in today's "
+            "candidate universe based on the current scoring rules."
+        )
+        risk_summary = (
+            "Risk: rank 1 is only the best relative candidate today and does not guarantee profit."
+        )
+
+    return {
+        "market_signal_summary": market_signal_summary,
+        "best_candidate_summary": best_candidate_summary,
+        "risk_summary": risk_summary,
+    }
+
+
 def generate_daily_recommendations(
     tickers,
     benchmark_ticker,

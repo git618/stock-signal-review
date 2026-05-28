@@ -146,6 +146,7 @@ def test_generate_report_creates_html_with_required_sections(monkeypatch, capsys
     assert "Stock Signal Research Report" in html
     assert "Generated:" in html
     assert "Saved Recommendations Summary" in html
+    assert "Recommendation Summary" in html
     assert "Weekly Review Summary" in html
     assert "Backtest Summary" in html
     assert "Strategy Comparison Summary" in html

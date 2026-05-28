@@ -1,5 +1,6 @@
 from src.database import get_recommendations, initialize_database, save_recommendations
 from src.recommendations import (
+    build_recommendation_summary,
     generate_daily_recommendations,
     generate_top_recommendations,
     score_stocks,
@@ -194,6 +195,50 @@ def test_recommendations_save_and_read_explanation_fields(tmp_path):
             "strategy_version": "v1",
         }
     ]
+
+
+def test_all_negative_scores_produce_no_strong_buy_signal_summary():
+    summary = build_recommendation_summary(
+        [
+            {"ticker": "AMZN", "rank": 1, "score": -0.2, "signal_strength": "weak"},
+            {"ticker": "AAPL", "rank": 2, "score": -0.1, "signal_strength": "weak"},
+        ]
+    )
+
+    assert summary["market_signal_summary"] == "No strong buy signal today."
+    assert summary["best_candidate_summary"] == (
+        "Best relative candidate: AMZN. Reason: AMZN ranked highest among the candidate universe, "
+        "but its total score is still negative."
+    )
+    assert summary["risk_summary"] == (
+        "Risk: all top recommendations have weak scores, so this should be treated as a watchlist, "
+        "not a strong buy signal."
+    )
+
+
+def test_positive_scores_produce_moderate_signal_summary():
+    summary = build_recommendation_summary(
+        [
+            {"ticker": "AAPL", "rank": 1, "score": 0.4, "signal_strength": "positive"},
+            {"ticker": "MSFT", "rank": 2, "score": 0.2, "signal_strength": "positive"},
+        ]
+    )
+
+    assert summary["market_signal_summary"] == "Positive but moderate signal today."
+    assert summary["best_candidate_summary"].startswith("Best relative candidate: AAPL.")
+    assert "does not guarantee profit" in summary["risk_summary"]
+
+
+def test_strong_score_produces_strong_signal_summary():
+    summary = build_recommendation_summary(
+        [
+            {"ticker": "NVDA", "rank": 1, "score": 1.4, "signal_strength": "strong"},
+            {"ticker": "AAPL", "rank": 2, "score": 0.3, "signal_strength": "positive"},
+        ]
+    )
+
+    assert summary["market_signal_summary"] == "Strong signal detected."
+    assert summary["best_candidate_summary"].startswith("Best relative candidate: NVDA.")
 
 
 def test_top_5_recommendations_preserve_full_explanation_fields():

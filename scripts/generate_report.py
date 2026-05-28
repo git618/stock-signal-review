@@ -14,6 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.backtest import run_backtest
 from src.config import DEFAULT_DB_PATH, load_config
+from src.recommendations import build_recommendation_summary
 from src.review import generate_weekly_review
 
 
@@ -189,6 +190,7 @@ def _render_report(generated_at, recommendations, weekly_review, backtest, strat
         "<body>",
         "<h1>Stock Signal Research Report</h1>",
         f'<p class="meta">Generated: {escape(generated_at)}</p>',
+        _render_recommendation_summary_section(recommendations),
         _render_recommendations_section(recommendations),
         _render_weekly_review_section(weekly_review),
         _render_backtest_section(backtest),
@@ -221,6 +223,31 @@ def _render_recommendations_section(rows):
             )
         )
     return f"<section><h2>Saved Recommendations Summary</h2>{body}</section>"
+
+
+def _render_recommendation_summary_section(rows):
+    if not rows:
+        body = "<p>No recommendations found.</p>"
+    else:
+        summary = build_recommendation_summary(
+            [
+                {
+                    "ticker": row["symbol"],
+                    "score": row["score"],
+                    "rank": row["rank"],
+                    "signal_strength": row["signal_strength"],
+                }
+                for row in rows
+            ]
+        )
+        body = _render_key_value_list(
+            [
+                ("market_signal_summary", summary["market_signal_summary"]),
+                ("best_candidate_summary", summary["best_candidate_summary"]),
+                ("risk_summary", summary["risk_summary"]),
+            ]
+        )
+    return f"<section><h2>Recommendation Summary</h2>{body}</section>"
 
 
 def _render_weekly_review_section(review):

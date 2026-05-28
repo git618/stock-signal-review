@@ -14,6 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.config import DEFAULT_DB_PATH, load_config
 from src.database import initialize_database
+from src.recommendations import build_recommendation_summary
 
 # Shared default database path: data/stock_research.db
 
@@ -54,8 +55,20 @@ def main(argv=None):
             f"{row['score']:<8} {row['signal_strength']:<15} {entry_price:<11} {row['strategy_version']:<16}"
         )
         if args.details:
+            summary = build_recommendation_summary(
+                [
+                    {
+                        "ticker": row["symbol"],
+                        "score": row["score"],
+                        "rank": row["rank"],
+                        "signal_strength": row["signal_strength"],
+                    }
+                ]
+            )
+            print(f"interpretation={summary['market_signal_summary']}")
             print(f"reasons={row['reasons']}")
             print(f"risk_notes={row['risk_notes']}")
+            print("note=weak means score <= 0")
 
     return 0
 

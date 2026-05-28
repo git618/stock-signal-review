@@ -10,7 +10,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import load_config
-from src.recommendations import generate_daily_recommendations
+from src.recommendations import build_recommendation_summary, generate_daily_recommendations
 
 
 def main(argv=None):
@@ -34,6 +34,13 @@ def main(argv=None):
         strategy_version=config["strategy"]["version"],
         strategy_weights=config["strategy"]["weights"],
     )
+
+    if recommendations:
+        summary = build_recommendation_summary(recommendations)
+        print(f"Today: {summary['market_signal_summary']}")
+        print(summary["best_candidate_summary"])
+        print(summary["risk_summary"])
+        print()
 
     for recommendation in recommendations:
         print(f"rank={recommendation['rank']}")

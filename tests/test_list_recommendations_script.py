@@ -197,5 +197,7 @@ def test_list_recommendations_details_shows_reasons_and_risk_notes(
     runpy.run_path(str(script_path), run_name="__main__")
     captured = capsys.readouterr()
 
+    assert "interpretation=Positive but moderate signal today." in captured.out
     assert "reasons=['return_20d contributed 0.5']" in captured.out
     assert "risk_notes=['20-day volatility is elevated']" in captured.out
+    assert "weak means score <= 0" in captured.out

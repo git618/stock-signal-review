@@ -432,6 +432,8 @@ def test_daily_script_prints_reasons_and_risk_notes(monkeypatch, capsys, tmp_pat
     runpy.run_path(str(script_path), run_name="__main__")
     captured = capsys.readouterr()
 
+    assert "Today: Positive but moderate signal today." in captured.out
+    assert "Best relative candidate: AAPL." in captured.out
     assert "signal_strength=positive" in captured.out
     assert "reasons=['return_20d contributed 0.2']" in captured.out
     assert "risk_notes=['20-day volatility is elevated']" in captured.out
