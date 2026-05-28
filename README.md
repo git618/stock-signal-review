@@ -406,6 +406,23 @@ The local HTML report:
 - Generated CSV files under `data/*.csv` are local outputs and are ignored by Git
 - Generated HTML files under `data/*.html` are local outputs and are ignored by Git
 
+## v1.0 Status
+
+Stable release summary:
+- local stock signal research system with SQLite-backed workflows
+- explainable daily recommendations with configurable strategy weights
+- weekly review against a benchmark
+- trading-day based backtesting
+- multi-strategy comparison
+- CSV export for research outputs
+- static local HTML reporting
+- GitHub Actions CI for automated `pytest` validation
+
+Release boundaries:
+- no trading execution
+- no broker integration
+- no profit guarantee
+
 ## v0.1 Status
 
 What works:
@@ -423,6 +440,24 @@ Operational notes:
 - it does not execute trades
 - it does not integrate with a broker
 - market data comes from `yfinance` and other free data paths can fail, be delayed, or return incomplete results
+
+## Final Validation
+
+Run the final local validation sequence from the project root:
+
+```bash
+make test
+make reset
+make daily
+make list
+make weekly
+make backtest
+make smoke
+```
+
+Release note:
+- live market-data commands may return empty graceful results when `yfinance` data is unavailable
+- validation is considered successful as long as tests pass and scripts do not raise tracebacks
 
 ## Development Workflow
 
