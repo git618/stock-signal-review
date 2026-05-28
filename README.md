@@ -62,6 +62,7 @@ What each step does:
 Recommendation explainability:
 - saved recommendations now retain `component_scores`, `reasons`, `risk_notes`, and `signal_strength`
 - `signal_strength` is categorized as `strong`, `positive`, or `weak`
+- daily output now includes a plain-English market summary, best-candidate summary, and risk summary
 - daily output prints reasons and risk notes for each recommendation
 - if all top scores are negative, the daily script warns that there is no strong buy signal today
 
@@ -285,6 +286,7 @@ python scripts/list_recommendations.py --details
 ```
 
 This prints stored recommendation reasons and risk notes in addition to the compact table output.
+It also includes a plain-English interpretation and explains that `weak` means `score <= 0`.
 
 ### `reset_database.py`
 
@@ -404,6 +406,7 @@ The local HTML report:
 - writes a single static HTML file with no JavaScript or external CSS
 - includes sections for:
   - project title and generated timestamp
+  - recommendation summary
   - saved recommendations summary
   - weekly review summary
   - backtest summary
@@ -411,6 +414,7 @@ The local HTML report:
 - shows empty-state messages instead of failing when a section has no data
 - prints `Wrote report: <path>` after writing the file
 - includes recommendation explanation fields such as `signal_strength`, `reasons`, and `risk_notes`
+- includes plain-English recommendation summaries for the current saved recommendations
 
 ## Current Limitations
 
