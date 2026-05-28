@@ -14,7 +14,12 @@ pip install -r requirements.txt
 
 ```bash
 python -m pytest -q
+make test
 ```
+
+Test workflow notes:
+- `make test` runs the full suite with the project virtualenv.
+- GitHub Actions runs `python -m pytest -q` automatically on every push and pull request.
 
 ## Common Commands
 
