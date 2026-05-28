@@ -39,11 +39,17 @@ def main(argv=None):
         print(f"rank={recommendation['rank']}")
         print(f"ticker={recommendation['ticker']}")
         print(f"score={recommendation['score']}")
+        print(f"signal_strength={recommendation['signal_strength']}")
         print(f"entry_price={recommendation['entry_price']}")
         print(f"strategy_version={recommendation['strategy_version']}")
         print(f"reasons={recommendation['reasons']}")
         print(f"risk_notes={recommendation['risk_notes']}")
         print()
+
+    if recommendations and all(recommendation["score"] <= 0 for recommendation in recommendations):
+        print(
+            "Warning: all recommendation scores are negative. This means there is no strong buy signal today."
+        )
 
     return 0
 

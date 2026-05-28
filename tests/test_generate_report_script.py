@@ -51,7 +51,15 @@ def test_generate_report_creates_html_with_required_sections(monkeypatch, capsys
         trading_date="2025-01-10",
         strategy_version="v1",
         recommendations=[
-            {"ticker": "AAPL", "score": 0.91, "rank": 1, "entry_price": 150.0},
+            {
+                "ticker": "AAPL",
+                "score": 0.91,
+                "rank": 1,
+                "entry_price": 150.0,
+                "signal_strength": "positive",
+                "reasons": ["return_20d contributed 0.5"],
+                "risk_notes": ["20-day volatility is elevated"],
+            },
         ],
     )
 
@@ -141,6 +149,79 @@ def test_generate_report_creates_html_with_required_sections(monkeypatch, capsys
     assert "Weekly Review Summary" in html
     assert "Backtest Summary" in html
     assert "Strategy Comparison Summary" in html
+
+
+def test_generate_report_includes_recommendation_reasons_and_risk_notes(
+    monkeypatch, tmp_path
+):
+    db_path = tmp_path / "research.db"
+    output_path = tmp_path / "report.html"
+    script_path = Path(__file__).resolve().parent.parent / "scripts/generate_report.py"
+    config_path = _write_config(tmp_path / "default.json", db_path=db_path)
+    initialize_database(db_path)
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-10",
+        strategy_version="v1",
+        recommendations=[
+            {
+                "ticker": "AAPL",
+                "score": 0.91,
+                "rank": 1,
+                "entry_price": 150.0,
+                "signal_strength": "positive",
+                "reasons": ["return_20d contributed 0.5"],
+                "risk_notes": ["20-day volatility is elevated"],
+            }
+        ],
+    )
+
+    monkeypatch.setattr(
+        "src.review.generate_weekly_review",
+        lambda **kwargs: {"summary": {"reviewed_count": 0}, "rows": []},
+    )
+    monkeypatch.setattr(
+        "src.backtest.run_backtest",
+        lambda **kwargs: {
+            "summary": {
+                "tested_count": 0,
+                "win_count": 0,
+                "loss_count": 0,
+                "win_rate": 0.0,
+                "average_return": 0.0,
+                "average_benchmark_return": 0.0,
+                "average_excess_return": 0.0,
+                "median_return": 0.0,
+                "median_excess_return": 0.0,
+                "best_ticker": None,
+                "worst_ticker": None,
+                "best_return": 0.0,
+                "worst_return": 0.0,
+            },
+            "rows": [],
+        },
+    )
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--output",
+            str(output_path),
+            "--db",
+            str(db_path),
+            "--config",
+            str(config_path),
+            "--strategy-configs",
+            str(config_path),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    html = output_path.read_text()
+
+    assert "signal_strength" in html
+    assert "return_20d contributed 0.5" in html
+    assert "20-day volatility is elevated" in html
 
 
 def test_generate_report_handles_empty_data_gracefully(monkeypatch, tmp_path):

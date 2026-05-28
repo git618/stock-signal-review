@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import json
 from pathlib import Path
 import os
 import sqlite3
@@ -43,15 +44,18 @@ def main(argv=None):
 
     header = (
         f"{'trading_date':<12} {'rank':<4} {'symbol':<8} "
-        f"{'score':<8} {'entry_price':<11} {'strategy_version':<16}"
+        f"{'score':<8} {'signal_strength':<15} {'entry_price':<11} {'strategy_version':<16}"
     )
     print(header)
     for row in rows:
         entry_price = "" if row["entry_price"] is None else str(row["entry_price"])
         print(
             f"{row['trading_date']:<12} {row['rank']:<4} {row['symbol']:<8} "
-            f"{row['score']:<8} {entry_price:<11} {row['strategy_version']:<16}"
+            f"{row['score']:<8} {row['signal_strength']:<15} {entry_price:<11} {row['strategy_version']:<16}"
         )
+        if args.details:
+            print(f"reasons={row['reasons']}")
+            print(f"risk_notes={row['risk_notes']}")
 
     return 0
 
@@ -61,6 +65,7 @@ def _parse_args(argv):
     parser.add_argument("--config")
     parser.add_argument("--db")
     parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument("--details", action="store_true")
     parser.add_argument("--csv")
     return parser.parse_known_args(argv)[0]
 
@@ -70,7 +75,16 @@ def _read_recommendations(db_path, limit):
     try:
         rows = connection.execute(
             """
-            SELECT trading_date, rank, symbol, score, entry_price, strategy_version
+            SELECT
+                trading_date,
+                rank,
+                symbol,
+                score,
+                entry_price,
+                signal_strength,
+                reasons,
+                risk_notes,
+                strategy_version
             FROM recommendations
             ORDER BY trading_date DESC, rank ASC, symbol ASC
             LIMIT ?
@@ -88,7 +102,10 @@ def _read_recommendations(db_path, limit):
             "symbol": row[2],
             "score": row[3],
             "entry_price": row[4],
-            "strategy_version": row[5],
+            "signal_strength": row[5] or _signal_strength(row[3]),
+            "reasons": _deserialize_json(row[6], []),
+            "risk_notes": _deserialize_json(row[7], []),
+            "strategy_version": row[8],
         }
         for row in rows
     ]
@@ -102,12 +119,38 @@ def _write_csv(csv_path, rows):
         "symbol",
         "score",
         "entry_price",
+        "signal_strength",
+        "reasons",
+        "risk_notes",
         "strategy_version",
     ]
     with csv_path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows(
+            [
+                {
+                    **row,
+                    "reasons": json.dumps(row["reasons"]),
+                    "risk_notes": json.dumps(row["risk_notes"]),
+                }
+                for row in rows
+            ]
+        )
+
+
+def _deserialize_json(value, default):
+    if value in (None, ""):
+        return default
+    return json.loads(value)
+
+
+def _signal_strength(score):
+    if score > 1:
+        return "strong"
+    if score > 0:
+        return "positive"
+    return "weak"
 
 
 if __name__ == "__main__":

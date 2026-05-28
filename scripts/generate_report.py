@@ -3,6 +3,7 @@
 import argparse
 from datetime import datetime, date, timedelta
 from html import escape
+import json
 from pathlib import Path
 import sqlite3
 import sys
@@ -74,7 +75,16 @@ def _read_recommendations(db_path):
     try:
         rows = connection.execute(
             """
-            SELECT trading_date, rank, symbol, score, entry_price, strategy_version
+            SELECT
+                trading_date,
+                rank,
+                symbol,
+                score,
+                entry_price,
+                signal_strength,
+                reasons,
+                risk_notes,
+                strategy_version
             FROM recommendations
             ORDER BY trading_date DESC, rank ASC, symbol ASC
             LIMIT 20
@@ -90,7 +100,10 @@ def _read_recommendations(db_path):
             "symbol": row[2],
             "score": row[3],
             "entry_price": row[4],
-            "strategy_version": row[5],
+            "signal_strength": row[5] or _signal_strength(row[3]),
+            "reasons": _deserialize_json(row[6], []),
+            "risk_notes": _deserialize_json(row[7], []),
+            "strategy_version": row[8],
         }
         for row in rows
     ]
@@ -194,7 +207,17 @@ def _render_recommendations_section(rows):
             f"<p>Saved recommendations: {len(rows)}</p>"
             + _render_table(
                 rows,
-                ["trading_date", "rank", "symbol", "score", "entry_price", "strategy_version"],
+                [
+                    "trading_date",
+                    "rank",
+                    "symbol",
+                    "score",
+                    "signal_strength",
+                    "entry_price",
+                    "reasons",
+                    "risk_notes",
+                    "strategy_version",
+                ],
             )
         )
     return f"<section><h2>Saved Recommendations Summary</h2>{body}</section>"
@@ -258,7 +281,7 @@ def _render_table(rows, fields):
     header = "".join(f"<th>{escape(field)}</th>" for field in fields)
     body_rows = []
     for row in rows:
-        cells = "".join(f"<td>{escape(str(row.get(field)))}</td>" for field in fields)
+        cells = "".join(f"<td>{escape(_render_value(row.get(field)))}</td>" for field in fields)
         body_rows.append(f"<tr>{cells}</tr>")
     return "<table><thead><tr>" + header + "</tr></thead><tbody>" + "".join(body_rows) + "</tbody></table>"
 
@@ -268,6 +291,26 @@ def _render_key_value_list(items):
         f"<li><strong>{escape(str(key))}</strong>: {escape(str(value))}</li>"
         for key, value in items
     ) + "</ul>"
+
+
+def _render_value(value):
+    if isinstance(value, list):
+        return "; ".join(str(item) for item in value)
+    return str(value)
+
+
+def _deserialize_json(value, default):
+    if value in (None, ""):
+        return default
+    return json.loads(value)
+
+
+def _signal_strength(score):
+    if score > 1:
+        return "strong"
+    if score > 0:
+        return "positive"
+    return "weak"
 
 
 if __name__ == "__main__":

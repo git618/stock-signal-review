@@ -48,6 +48,10 @@ def test_saving_recommendations_to_sqlite(tmp_path):
             "symbol": "BBB",
             "score": 0.91,
             "rank": 1,
+            "component_scores": {},
+            "reasons": [],
+            "risk_notes": [],
+            "signal_strength": "positive",
             "strategy_version": "v1",
         },
         {
@@ -55,6 +59,10 @@ def test_saving_recommendations_to_sqlite(tmp_path):
             "symbol": "FFF",
             "score": 0.83,
             "rank": 2,
+            "component_scores": {},
+            "reasons": [],
+            "risk_notes": [],
+            "signal_strength": "positive",
             "strategy_version": "v1",
         },
     ]
@@ -89,6 +97,10 @@ def test_save_recommendations_does_not_insert_duplicate_rows_for_same_key(tmp_pa
             "symbol": "BBB",
             "score": 0.91,
             "rank": 1,
+            "component_scores": {},
+            "reasons": [],
+            "risk_notes": [],
+            "signal_strength": "positive",
             "strategy_version": "v1",
         },
         {
@@ -96,6 +108,10 @@ def test_save_recommendations_does_not_insert_duplicate_rows_for_same_key(tmp_pa
             "symbol": "FFF",
             "score": 0.83,
             "rank": 2,
+            "component_scores": {},
+            "reasons": [],
+            "risk_notes": [],
+            "signal_strength": "positive",
             "strategy_version": "v1",
         },
     ]
@@ -124,6 +140,10 @@ def test_save_recommendations_allows_duplicates_with_different_strategy_version(
             "symbol": "BBB",
             "score": 0.91,
             "rank": 1,
+            "component_scores": {},
+            "reasons": [],
+            "risk_notes": [],
+            "signal_strength": "positive",
             "strategy_version": "v1",
         },
         {
@@ -131,8 +151,48 @@ def test_save_recommendations_allows_duplicates_with_different_strategy_version(
             "symbol": "BBB",
             "score": 0.55,
             "rank": 3,
+            "component_scores": {},
+            "reasons": [],
+            "risk_notes": [],
+            "signal_strength": "positive",
             "strategy_version": "v2",
         },
+    ]
+
+
+def test_recommendations_save_and_read_explanation_fields(tmp_path):
+    db_path = tmp_path / "research.db"
+    initialize_database(db_path)
+
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-10",
+        strategy_version="v1",
+        recommendations=[
+            {
+                "ticker": "BBB",
+                "score": 1.2,
+                "rank": 1,
+                "component_scores": {"return_20d": 0.7, "return_5d": 0.3},
+                "reasons": ["return_20d contributed 0.7"],
+                "risk_notes": ["20-day volatility is elevated"],
+                "signal_strength": "strong",
+            }
+        ],
+    )
+
+    assert get_recommendations(db_path, trading_date="2025-01-10") == [
+        {
+            "trading_date": "2025-01-10",
+            "symbol": "BBB",
+            "score": 1.2,
+            "rank": 1,
+            "component_scores": {"return_20d": 0.7, "return_5d": 0.3},
+            "reasons": ["return_20d contributed 0.7"],
+            "risk_notes": ["20-day volatility is elevated"],
+            "signal_strength": "strong",
+            "strategy_version": "v1",
+        }
     ]
 
 

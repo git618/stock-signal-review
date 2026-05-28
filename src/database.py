@@ -1,5 +1,6 @@
 """SQLite persistence layer."""
 
+import json
 from pathlib import Path
 import sqlite3
 
@@ -42,6 +43,18 @@ def initialize_database(db_path):
             )
         except sqlite3.OperationalError:
             pass
+        for column_name, column_type in [
+            ("component_scores", "TEXT"),
+            ("reasons", "TEXT"),
+            ("risk_notes", "TEXT"),
+            ("signal_strength", "TEXT"),
+        ]:
+            try:
+                connection.execute(
+                    f"ALTER TABLE recommendations ADD COLUMN {column_name} {column_type}"
+                )
+            except sqlite3.OperationalError:
+                pass
         connection.commit()
     finally:
         connection.close()
@@ -109,8 +122,19 @@ def save_recommendations(db_path, trading_date, strategy_version, recommendation
         connection.executemany(
             """
             INSERT OR IGNORE INTO recommendations
-            (trading_date, symbol, score, rank, entry_price, strategy_version)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (
+                trading_date,
+                symbol,
+                score,
+                rank,
+                entry_price,
+                component_scores,
+                reasons,
+                risk_notes,
+                signal_strength,
+                strategy_version
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 (
@@ -119,6 +143,10 @@ def save_recommendations(db_path, trading_date, strategy_version, recommendation
                     recommendation["score"],
                     recommendation["rank"],
                     recommendation.get("entry_price"),
+                    json.dumps(recommendation.get("component_scores", {})),
+                    json.dumps(recommendation.get("reasons", [])),
+                    json.dumps(recommendation.get("risk_notes", [])),
+                    recommendation.get("signal_strength", _signal_strength(recommendation["score"])),
                     strategy_version,
                 )
                 for recommendation in recommendations
@@ -135,19 +163,39 @@ def get_recommendations(db_path, trading_date=None):
         if trading_date is None:
             rows = connection.execute(
                 """
-                SELECT trading_date, symbol, score, rank, strategy_version
+                SELECT
+                    trading_date,
+                    symbol,
+                    score,
+                    rank,
+                    entry_price,
+                    component_scores,
+                    reasons,
+                    risk_notes,
+                    signal_strength,
+                    strategy_version
                 FROM recommendations
                 ORDER BY trading_date, rank, symbol
                 """
             ).fetchall()
         else:
             rows = connection.execute(
-                """
-                SELECT trading_date, symbol, score, rank, strategy_version
-                FROM recommendations
-                WHERE trading_date = ?
-                ORDER BY rank, symbol
-                """,
+                 """
+                 SELECT
+                    trading_date,
+                    symbol,
+                    score,
+                    rank,
+                    entry_price,
+                    component_scores,
+                    reasons,
+                    risk_notes,
+                    signal_strength,
+                    strategy_version
+                 FROM recommendations
+                 WHERE trading_date = ?
+                 ORDER BY rank, symbol
+                 """,
                 (trading_date,),
             ).fetchall()
     finally:
@@ -159,7 +207,25 @@ def get_recommendations(db_path, trading_date=None):
             "symbol": row[1],
             "score": row[2],
             "rank": row[3],
-            "strategy_version": row[4],
+            "component_scores": _deserialize_json(row[5], {}),
+            "reasons": _deserialize_json(row[6], []),
+            "risk_notes": _deserialize_json(row[7], []),
+            "signal_strength": row[8] or _signal_strength(row[2]),
+            "strategy_version": row[9],
         }
         for row in rows
     ]
+
+
+def _deserialize_json(value, default):
+    if value in (None, ""):
+        return default
+    return json.loads(value)
+
+
+def _signal_strength(score):
+    if score > 1:
+        return "strong"
+    if score > 0:
+        return "positive"
+    return "weak"

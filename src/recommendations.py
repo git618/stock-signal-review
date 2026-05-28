@@ -38,6 +38,8 @@ def generate_top_recommendations(scored_stocks, limit=5):
             "score": stock["score"],
             "rank": index,
             "entry_price": stock.get("entry_price"),
+            "component_scores": stock.get("component_scores", {}),
+            "signal_strength": stock.get("signal_strength", signal_strength_for_score(stock["score"])),
             "strategy_version": stock.get("strategy_version"),
             "reasons": stock.get("reasons", []),
             "risk_notes": stock.get("risk_notes", []),
@@ -49,6 +51,14 @@ def generate_top_recommendations(scored_stocks, limit=5):
 
 def save_recommendation_batch(db_path, trading_date, strategy_version, recommendations):
     persist_recommendations(db_path, trading_date, strategy_version, recommendations)
+
+
+def signal_strength_for_score(score):
+    if score > 1:
+        return "strong"
+    if score > 0:
+        return "positive"
+    return "weak"
 
 
 def generate_daily_recommendations(
@@ -98,6 +108,8 @@ def generate_daily_recommendations(
                 "ticker": scored["ticker"],
                 "score": scored["score"],
                 "entry_price": features["close"],
+                "component_scores": scored["component_scores"],
+                "signal_strength": signal_strength_for_score(scored["score"]),
                 "strategy_version": scored["strategy_version"],
                 "reasons": scored["reasons"],
                 "risk_notes": scored["risk_notes"],

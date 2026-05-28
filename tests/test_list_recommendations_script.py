@@ -77,6 +77,7 @@ def test_list_recommendations_output_includes_required_fields(monkeypatch, capsy
     assert "symbol" in captured.out or "ticker" in captured.out
     assert "score" in captured.out
     assert "entry_price" in captured.out
+    assert "signal_strength" in captured.out
     assert "strategy_version" in captured.out
 
 
@@ -121,7 +122,15 @@ def test_list_recommendations_script_writes_csv_when_requested(monkeypatch, caps
         trading_date="2025-01-10",
         strategy_version="v1",
         recommendations=[
-            {"ticker": "AAPL", "score": 0.91, "rank": 1, "entry_price": 150.0},
+            {
+                "ticker": "AAPL",
+                "score": 0.91,
+                "rank": 1,
+                "entry_price": 150.0,
+                "reasons": ["return_20d contributed 0.5"],
+                "risk_notes": ["20-day volatility is elevated"],
+                "signal_strength": "positive",
+            },
         ],
     )
 
@@ -142,6 +151,51 @@ def test_list_recommendations_script_writes_csv_when_requested(monkeypatch, caps
 
     assert csv_path.exists()
     csv_text = csv_path.read_text()
-    assert "trading_date,rank,symbol,score,entry_price,strategy_version" in csv_text
+    assert (
+        "trading_date,rank,symbol,score,entry_price,signal_strength,reasons,risk_notes,strategy_version"
+        in csv_text
+    )
     assert "AAPL" in csv_text
-    assert f"Wrote CSV: {csv_path}" in captured.out
+    assert "positive" in csv_text
+    assert "return_20d contributed 0.5" in csv_text
+    assert "20-day volatility is elevated" in csv_text
+
+
+def test_list_recommendations_details_shows_reasons_and_risk_notes(
+    monkeypatch, capsys, tmp_path
+):
+    db_path = tmp_path / "research.db"
+    initialize_database(db_path)
+    save_recommendations(
+        db_path,
+        trading_date="2025-01-10",
+        strategy_version="v1",
+        recommendations=[
+            {
+                "ticker": "AAPL",
+                "score": 0.91,
+                "rank": 1,
+                "entry_price": 150.0,
+                "reasons": ["return_20d contributed 0.5"],
+                "risk_notes": ["20-day volatility is elevated"],
+                "signal_strength": "positive",
+            },
+        ],
+    )
+
+    script_path = Path(__file__).resolve().parent.parent / "scripts/list_recommendations.py"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--db",
+            str(db_path),
+            "--details",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+
+    assert "reasons=['return_20d contributed 0.5']" in captured.out
+    assert "risk_notes=['20-day volatility is elevated']" in captured.out

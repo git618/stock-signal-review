@@ -76,3 +76,43 @@ def test_inserting_and_reading_daily_ohlcv_prices(tmp_path):
             "volume": 1_250_000,
         },
     ]
+
+
+def test_initialize_database_migrates_old_recommendation_schema(tmp_path):
+    db_path = tmp_path / "research.db"
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.execute(
+            """
+            CREATE TABLE recommendations (
+                trading_date TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                score REAL NOT NULL,
+                rank INTEGER NOT NULL,
+                strategy_version TEXT NOT NULL,
+                PRIMARY KEY (trading_date, symbol, strategy_version)
+            )
+            """
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    initialize_database(db_path)
+
+    connection = sqlite3.connect(db_path)
+    try:
+        columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(recommendations)").fetchall()
+        }
+    finally:
+        connection.close()
+
+    assert {
+        "entry_price",
+        "component_scores",
+        "reasons",
+        "risk_notes",
+        "signal_strength",
+    }.issubset(columns)
