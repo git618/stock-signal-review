@@ -2,6 +2,8 @@ import csv
 from pathlib import Path
 import runpy
 
+import pytest
+
 from src.config import load_config
 
 
@@ -195,6 +197,230 @@ def test_example_strategy_configs_are_valid_json_and_load_correctly():
     assert low_vol_config["strategy"]["version"] == "low-vol-v1"
 
 
+def test_compare_strategies_sorts_by_average_excess_return_ascending(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    low_config = _write_config(tmp_path / "low.json", version="low")
+    high_config = _write_config(tmp_path / "high.json", version="high")
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_with_excess(
+                kwargs["strategy_version"],
+                _excess_by_strategy(kwargs["strategy_version"]),
+            ),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(high_config),
+            str(low_config),
+            "--sort-by",
+            "average_excess_return",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+    rows = _printed_data_rows(captured.out)
+
+    assert rows[0].startswith(str(low_config))
+    assert rows[1].startswith(str(high_config))
+
+
+def test_compare_strategies_sorts_by_average_excess_return_descending(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    low_config = _write_config(tmp_path / "low.json", version="low")
+    high_config = _write_config(tmp_path / "high.json", version="high")
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_with_excess(
+                kwargs["strategy_version"],
+                _excess_by_strategy(kwargs["strategy_version"]),
+            ),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(low_config),
+            str(high_config),
+            "--sort-by",
+            "average_excess_return",
+            "--descending",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+    rows = _printed_data_rows(captured.out)
+
+    assert rows[0].startswith(str(high_config))
+    assert rows[1].startswith(str(low_config))
+
+
+def test_compare_strategies_prints_best_strategy_summary_when_sorted(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    low_config = _write_config(tmp_path / "low.json", version="low")
+    high_config = _write_config(tmp_path / "high.json", version="high")
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_with_excess(
+                kwargs["strategy_version"],
+                _excess_by_strategy(kwargs["strategy_version"]),
+            ),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(low_config),
+            str(high_config),
+            "--sort-by",
+            "average_excess_return",
+            "--descending",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+
+    assert f"best_config={high_config}" in captured.out
+    assert "best_strategy=high" in captured.out
+    assert "best_metric=average_excess_return" in captured.out
+    assert "best_value=0.2" in captured.out
+
+
+def test_compare_strategies_csv_preserves_sorted_order(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    low_config = _write_config(tmp_path / "low.json", version="low")
+    high_config = _write_config(tmp_path / "high.json", version="high")
+    csv_path = tmp_path / "comparison.csv"
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_with_excess(
+                kwargs["strategy_version"],
+                _excess_by_strategy(kwargs["strategy_version"]),
+            ),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(low_config),
+            str(high_config),
+            "--sort-by",
+            "average_excess_return",
+            "--descending",
+            "--csv",
+            str(csv_path),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    rows = list(csv.DictReader(csv_path.open()))
+    assert rows[0]["config"] == str(high_config)
+    assert rows[1]["config"] == str(low_config)
+
+
+def test_compare_strategies_invalid_sort_by_exits_with_readable_error(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    config_path = _write_config(tmp_path / "one.json", version="v1")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(config_path),
+            "--sort-by",
+            "not_a_metric",
+        ],
+    )
+
+    with pytest.raises(SystemExit):
+        runpy.run_path(str(script_path), run_name="__main__")
+
+    captured = capsys.readouterr()
+    assert "invalid choice" in captured.err or "Invalid --sort-by metric" in captured.err
+
+
+def test_compare_strategies_without_sort_by_preserves_input_order(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    first_config = _write_config(tmp_path / "first.json", version="first")
+    second_config = _write_config(tmp_path / "second.json", version="second")
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_with_excess(
+                kwargs["strategy_version"],
+                _excess_by_strategy(kwargs["strategy_version"]),
+            ),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(second_config),
+            str(first_config),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+    rows = _printed_data_rows(captured.out)
+
+    assert rows[0].startswith(str(second_config))
+    assert rows[1].startswith(str(first_config))
+    assert "best_config=" not in captured.out
+
+
 def _write_config(path, version):
     path.write_text(
         """{
@@ -255,3 +481,26 @@ def _summary(strategy_version, tested_count=4):
         "worst_return": -0.03,
         "strategy_version": strategy_version,
     }
+
+
+def _summary_with_excess(strategy_version, excess_return):
+    summary = _summary(strategy_version)
+    summary["average_excess_return"] = excess_return
+    return summary
+
+
+def _excess_by_strategy(strategy_version):
+    return {
+        "high": 0.2,
+        "low": -0.1,
+        "first": 0.1,
+        "second": 0.3,
+    }.get(strategy_version, 0.0)
+
+
+def _printed_data_rows(output):
+    return [
+        line
+        for line in output.splitlines()
+        if line and not line.startswith("config ") and not line.startswith("best_")
+    ]

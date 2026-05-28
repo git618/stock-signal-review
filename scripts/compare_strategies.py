@@ -31,6 +31,18 @@ SUMMARY_FIELDS = [
     "worst_return",
 ]
 
+SORT_FIELDS = [
+    "tested_count",
+    "win_rate",
+    "average_return",
+    "average_benchmark_return",
+    "average_excess_return",
+    "median_return",
+    "median_excess_return",
+    "best_return",
+    "worst_return",
+]
+
 
 def main(argv=None):
     args = _parse_args(argv)
@@ -56,18 +68,29 @@ def main(argv=None):
         }
         rows.append({field: row.get(field) for field in SUMMARY_FIELDS})
 
+    if args.sort_by:
+        rows = sorted(
+            rows,
+            key=lambda row: row[args.sort_by],
+            reverse=args.descending,
+        )
+
     if args.csv:
         csv_path = Path(args.csv)
         _write_csv(csv_path, rows)
         print(f"Wrote CSV: {csv_path}")
 
     _print_rows(rows)
+    if args.sort_by:
+        _print_best_strategy(rows[0], args.sort_by)
     return 0
 
 
 def _parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("--configs", nargs="+", required=True)
+    parser.add_argument("--sort-by", choices=SORT_FIELDS)
+    parser.add_argument("--descending", action="store_true")
     parser.add_argument("--csv")
     return parser.parse_known_args(argv)[0]
 
@@ -85,6 +108,13 @@ def _print_rows(rows):
     print(header)
     for row in rows:
         print(" ".join(str(row.get(field)) for field in SUMMARY_FIELDS))
+
+
+def _print_best_strategy(row, metric):
+    print(f"best_config={row['config']}")
+    print(f"best_strategy={row['strategy_version']}")
+    print(f"best_metric={metric}")
+    print(f"best_value={row[metric]}")
 
 
 if __name__ == "__main__":
