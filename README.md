@@ -128,6 +128,9 @@ Multi-strategy comparison:
 - Optional CSV export writes the same summary columns to a local file.
 - `--sort-by` sorts strategy rows by a supported summary metric.
 - `--descending` puts higher metric values first.
+- `--top` limits the number of displayed and exported strategy rows after filtering and sorting.
+- `--hide-zero-results` removes rows where `tested_count` is `0`.
+- `--min-tested-count` removes rows below a minimum tested count.
 - When sorted, the script prints a best-strategy summary after the table.
 
 Example:
@@ -137,8 +140,25 @@ python scripts/compare_strategies.py \
   --configs config/default.json config/momentum.json config/low_volatility.json \
   --sort-by average_excess_return \
   --descending \
+  --top 1 \
+  --min-tested-count 50 \
   --csv data/strategy_comparison.csv
 ```
+
+Filtering order:
+- compute all strategy summaries
+- apply `--hide-zero-results`
+- apply `--min-tested-count`
+- apply `--sort-by` and `--descending`
+- apply `--top`
+
+If no rows remain after filtering, the script prints:
+
+```text
+No strategy results to display.
+```
+
+CSV export writes only the filtered, sorted, top-limited rows. It still writes the header row when no rows remain.
 
 Supported sort metrics:
 - `tested_count`
@@ -157,7 +177,7 @@ Best-strategy summary fields:
 - `best_metric`
 - `best_value`
 
-CSV export uses the same sorted order as terminal output.
+Best-strategy output is omitted when no rows remain after filtering.
 
 Comparison output fields:
 - `config`
