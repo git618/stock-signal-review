@@ -126,14 +126,38 @@ Multi-strategy comparison:
 - Use [config/default.json](/home/king/stock-signal-review/config/default.json), [config/momentum.json](/home/king/stock-signal-review/config/momentum.json), and [config/low_volatility.json](/home/king/stock-signal-review/config/low_volatility.json) as comparable research presets.
 - `scripts/compare_strategies.py` runs one backtest per config and prints one summary row per strategy.
 - Optional CSV export writes the same summary columns to a local file.
+- `--sort-by` sorts strategy rows by a supported summary metric.
+- `--descending` puts higher metric values first.
+- When sorted, the script prints a best-strategy summary after the table.
 
 Example:
 
 ```bash
 python scripts/compare_strategies.py \
   --configs config/default.json config/momentum.json config/low_volatility.json \
+  --sort-by average_excess_return \
+  --descending \
   --csv data/strategy_comparison.csv
 ```
+
+Supported sort metrics:
+- `tested_count`
+- `win_rate`
+- `average_return`
+- `average_benchmark_return`
+- `average_excess_return`
+- `median_return`
+- `median_excess_return`
+- `best_return`
+- `worst_return`
+
+Best-strategy summary fields:
+- `best_config`
+- `best_strategy`
+- `best_metric`
+- `best_value`
+
+CSV export uses the same sorted order as terminal output.
 
 Comparison output fields:
 - `config`
