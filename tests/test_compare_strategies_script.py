@@ -421,6 +421,300 @@ def test_compare_strategies_without_sort_by_preserves_input_order(
     assert "best_config=" not in captured.out
 
 
+def test_compare_strategies_top_limits_displayed_strategy_rows(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    low_config = _write_config(tmp_path / "low.json", version="low")
+    high_config = _write_config(tmp_path / "high.json", version="high")
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_for_strategy(kwargs["strategy_version"]),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(low_config),
+            str(high_config),
+            "--sort-by",
+            "average_excess_return",
+            "--descending",
+            "--top",
+            "1",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+    rows = _printed_data_rows(captured.out)
+
+    assert len(rows) == 1
+    assert rows[0].startswith(str(high_config))
+
+
+def test_compare_strategies_top_limits_csv_rows(monkeypatch, tmp_path):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    low_config = _write_config(tmp_path / "low.json", version="low")
+    high_config = _write_config(tmp_path / "high.json", version="high")
+    csv_path = tmp_path / "comparison.csv"
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_for_strategy(kwargs["strategy_version"]),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(low_config),
+            str(high_config),
+            "--sort-by",
+            "average_excess_return",
+            "--descending",
+            "--top",
+            "1",
+            "--csv",
+            str(csv_path),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+
+    rows = list(csv.DictReader(csv_path.open()))
+    assert len(rows) == 1
+    assert rows[0]["config"] == str(high_config)
+
+
+def test_compare_strategies_hide_zero_results_removes_zero_tested_count_rows(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    zero_config = _write_config(tmp_path / "zero.json", version="zero")
+    high_config = _write_config(tmp_path / "high.json", version="high")
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_for_strategy(kwargs["strategy_version"]),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(zero_config),
+            str(high_config),
+            "--hide-zero-results",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+    rows = _printed_data_rows(captured.out)
+
+    assert len(rows) == 1
+    assert rows[0].startswith(str(high_config))
+
+
+def test_compare_strategies_min_tested_count_removes_rows_below_threshold(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    low_count_config = _write_config(tmp_path / "low-count.json", version="low-count")
+    high_count_config = _write_config(tmp_path / "high-count.json", version="high-count")
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_for_strategy(kwargs["strategy_version"]),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(low_count_config),
+            str(high_count_config),
+            "--min-tested-count",
+            "50",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+    rows = _printed_data_rows(captured.out)
+
+    assert len(rows) == 1
+    assert rows[0].startswith(str(high_count_config))
+
+
+def test_compare_strategies_filters_before_sorting_and_top_limiting(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    zero_best_config = _write_config(tmp_path / "zero-best.json", version="zero-best")
+    high_count_config = _write_config(tmp_path / "high-count.json", version="high-count")
+    low_count_config = _write_config(tmp_path / "low-count.json", version="low-count")
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_for_strategy(kwargs["strategy_version"]),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(zero_best_config),
+            str(high_count_config),
+            str(low_count_config),
+            "--hide-zero-results",
+            "--min-tested-count",
+            "50",
+            "--sort-by",
+            "average_excess_return",
+            "--descending",
+            "--top",
+            "1",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+    rows = _printed_data_rows(captured.out)
+
+    assert len(rows) == 1
+    assert rows[0].startswith(str(high_count_config))
+    assert f"best_config={high_count_config}" in captured.out
+
+
+def test_compare_strategies_no_rows_after_filtering_prints_empty_message(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    zero_config = _write_config(tmp_path / "zero.json", version="zero")
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_for_strategy(kwargs["strategy_version"]),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(zero_config),
+            "--hide-zero-results",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+
+    assert "No strategy results to display." in captured.out
+
+
+def test_compare_strategies_best_config_not_printed_when_no_rows_remain(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    zero_config = _write_config(tmp_path / "zero.json", version="zero")
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_for_strategy(kwargs["strategy_version"]),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(zero_config),
+            "--hide-zero-results",
+            "--sort-by",
+            "average_excess_return",
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+
+    assert "best_config=" not in captured.out
+
+
+def test_compare_strategies_without_filters_keeps_existing_output(
+    monkeypatch, capsys, tmp_path
+):
+    script_path = Path(__file__).resolve().parent.parent / "scripts/compare_strategies.py"
+    zero_config = _write_config(tmp_path / "zero.json", version="zero")
+    high_config = _write_config(tmp_path / "high.json", version="high")
+
+    def fake_run_backtest(**kwargs):
+        return {
+            "summary": _summary_for_strategy(kwargs["strategy_version"]),
+            "rows": [],
+        }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(Path.cwd()))
+    monkeypatch.setattr("src.backtest.run_backtest", fake_run_backtest)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            str(script_path),
+            "--configs",
+            str(zero_config),
+            str(high_config),
+        ],
+    )
+
+    runpy.run_path(str(script_path), run_name="__main__")
+    captured = capsys.readouterr()
+    rows = _printed_data_rows(captured.out)
+
+    assert len(rows) == 2
+    assert rows[0].startswith(str(zero_config))
+    assert rows[1].startswith(str(high_config))
+    assert "No strategy results to display." not in captured.out
+
+
 def _write_config(path, version):
     path.write_text(
         """{
@@ -483,8 +777,8 @@ def _summary(strategy_version, tested_count=4):
     }
 
 
-def _summary_with_excess(strategy_version, excess_return):
-    summary = _summary(strategy_version)
+def _summary_with_excess(strategy_version, excess_return, tested_count=4):
+    summary = _summary(strategy_version, tested_count=tested_count)
     summary["average_excess_return"] = excess_return
     return summary
 
@@ -495,7 +789,23 @@ def _excess_by_strategy(strategy_version):
         "low": -0.1,
         "first": 0.1,
         "second": 0.3,
+        "zero-best": 0.9,
     }.get(strategy_version, 0.0)
+
+
+def _summary_for_strategy(strategy_version):
+    if strategy_version == "zero":
+        return _summary_with_excess(strategy_version, 0.0, tested_count=0)
+    if strategy_version == "zero-best":
+        return _summary_with_excess(strategy_version, 0.9, tested_count=0)
+    if strategy_version == "low-count":
+        return _summary_with_excess(strategy_version, 0.1, tested_count=10)
+    if strategy_version == "high-count":
+        return _summary_with_excess(strategy_version, 0.2, tested_count=100)
+    return _summary_with_excess(
+        strategy_version,
+        _excess_by_strategy(strategy_version),
+    )
 
 
 def _printed_data_rows(output):

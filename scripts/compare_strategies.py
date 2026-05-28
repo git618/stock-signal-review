@@ -68,6 +68,16 @@ def main(argv=None):
         }
         rows.append({field: row.get(field) for field in SUMMARY_FIELDS})
 
+    if args.hide_zero_results:
+        rows = [row for row in rows if row["tested_count"] != 0]
+
+    if args.min_tested_count is not None:
+        rows = [
+            row
+            for row in rows
+            if row["tested_count"] >= args.min_tested_count
+        ]
+
     if args.sort_by:
         rows = sorted(
             rows,
@@ -75,10 +85,17 @@ def main(argv=None):
             reverse=args.descending,
         )
 
+    if args.top is not None:
+        rows = rows[: args.top]
+
     if args.csv:
         csv_path = Path(args.csv)
         _write_csv(csv_path, rows)
         print(f"Wrote CSV: {csv_path}")
+
+    if not rows:
+        print("No strategy results to display.")
+        return 0
 
     _print_rows(rows)
     if args.sort_by:
@@ -91,6 +108,9 @@ def _parse_args(argv):
     parser.add_argument("--configs", nargs="+", required=True)
     parser.add_argument("--sort-by", choices=SORT_FIELDS)
     parser.add_argument("--descending", action="store_true")
+    parser.add_argument("--top", type=int)
+    parser.add_argument("--hide-zero-results", action="store_true")
+    parser.add_argument("--min-tested-count", type=int)
     parser.add_argument("--csv")
     return parser.parse_known_args(argv)[0]
 
