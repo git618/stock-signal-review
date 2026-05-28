@@ -59,6 +59,12 @@ What each step does:
 - `list_recommendations.py` shows saved recommendations from SQLite.
 - `generate_weekly_review.py` reviews mature recommendations against the benchmark.
 
+Recommendation explainability:
+- saved recommendations now retain `component_scores`, `reasons`, `risk_notes`, and `signal_strength`
+- `signal_strength` is categorized as `strong`, `positive`, or `weak`
+- daily output prints reasons and risk notes for each recommendation
+- if all top scores are negative, the daily script warns that there is no strong buy signal today
+
 ## Configuration
 
 Default research settings live in [config/default.json](/home/king/stock-signal-review/config/default.json).
@@ -267,7 +273,18 @@ The exported CSV includes:
 - `symbol`
 - `score`
 - `entry_price`
+- `signal_strength`
+- `reasons`
+- `risk_notes`
 - `strategy_version`
+
+Detailed list view:
+
+```bash
+python scripts/list_recommendations.py --details
+```
+
+This prints stored recommendation reasons and risk notes in addition to the compact table output.
 
 ### `reset_database.py`
 
@@ -393,6 +410,7 @@ The local HTML report:
   - strategy comparison summary
 - shows empty-state messages instead of failing when a section has no data
 - prints `Wrote report: <path>` after writing the file
+- includes recommendation explanation fields such as `signal_strength`, `reasons`, and `risk_notes`
 
 ## Current Limitations
 
