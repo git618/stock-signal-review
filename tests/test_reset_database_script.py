@@ -41,6 +41,23 @@ def test_reset_database_works_when_database_file_does_not_exist(monkeypatch, cap
     assert "Database reset complete" in captured.out
 
 
+def test_reset_database_creates_missing_default_parent_directory(
+    monkeypatch, capsys, tmp_path
+):
+    reset_script = Path(__file__).resolve().parent.parent / "scripts/reset_database.py"
+    target_db_path = tmp_path / "data" / "stock_research.db"
+
+    monkeypatch.setattr("src.config.DEFAULT_DB_PATH", target_db_path)
+    monkeypatch.setattr("sys.argv", [str(reset_script)])
+
+    runpy.run_path(str(reset_script), run_name="__main__")
+    captured = capsys.readouterr()
+
+    assert target_db_path.exists()
+    assert target_db_path.parent.exists()
+    assert "Database reset complete" in captured.out
+
+
 def test_reset_database_accepts_db_argument(monkeypatch, tmp_path):
     db_path = tmp_path / "custom.db"
     script_path = Path(__file__).resolve().parent.parent / "scripts/reset_database.py"

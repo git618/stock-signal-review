@@ -22,6 +22,15 @@ def test_initialize_database_creates_required_tables(tmp_path):
     assert {"daily_prices", "recommendations"}.issubset(table_names)
 
 
+def test_initialize_database_creates_missing_parent_directory(tmp_path):
+    db_path = tmp_path / "nested" / "deeper" / "research.db"
+
+    initialize_database(db_path)
+
+    assert db_path.parent.exists()
+    assert db_path.exists()
+
+
 def test_inserting_and_reading_daily_ohlcv_prices(tmp_path):
     db_path = tmp_path / "research.db"
     initialize_database(db_path)

@@ -1,9 +1,12 @@
 """SQLite persistence layer."""
 
+from pathlib import Path
 import sqlite3
 
 
 def initialize_database(db_path):
+    db_path = Path(db_path)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(db_path)
     try:
         connection.execute(
